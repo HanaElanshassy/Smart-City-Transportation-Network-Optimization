@@ -1,0 +1,16 @@
+# ── Web UI ────────────────────────────────────────────────────
+streamlit==1.35.0
+plotly==5.22.0
+
+# ── Data / ML  (Member 1) ─────────────────────────────────────
+pandas==2.2.2
+numpy==1.26.4
+scikit-learn==1.4.2
+joblib==1.4.2
+
+# ── Visualization (Members 2, 6, 7) ──────────────────────────
+matplotlib==3.9.0
+networkx==3.3
+
+# ── HTTP (TomTom API — optional, Member 1) ───────────────────
+requests==2.32.3

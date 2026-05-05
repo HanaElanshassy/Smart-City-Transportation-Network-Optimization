@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cairo Emergency Router — A* vs Dijkstra Race</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:         #06091a;
+    --bg2:        #0d1229;
+    --bg3:        #131a36;
+    --border:     #1e2a50;
+    --border-hi:  #2a3f7a;
+    --cyan:       #00d4ff;
+    --cyan-dim:   #006880;
+    --orange:     #ff7135;
+    --orange-dim: #7a3510;
+    --green:      #39ff14;
+    --green-dim:  #1a7208;
+    --red:        #ff2255;
+    --red-dim:    #7a0f28;
+    --gold:       #ffd84d;
+    --text:       #c8d8f0;
+    --text-dim:   #5a7099;
+    --text-bright:#e8f4ff;
+    --font-ui:    'Rajdhani', sans-serif;
+    --font-mono:  'Share Tech Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Grid noise background ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 18px 28px 14px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #0a1030 0%, transparent 100%);
+  }
+  .pulse-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 10px var(--red);
+    animation: blink 1s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+  header h1 {
+    font-size: 22px; font-weight: 700; letter-spacing: 2px;
+    color: var(--text-bright); text-transform: uppercase;
+  }
+  header .sub {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--text-dim); margin-left: auto;
+  }
+  .tag {
+    font-family: var(--font-mono); font-size: 10px;
+    padding: 3px 8px; border-radius: 3px;
+    background: var(--red-dim); color: var(--red);
+    border: 1px solid var(--red); letter-spacing: 1px;
+  }
+
+  /* ── CONTROLS PANEL ── */
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end;
+    padding: 16px 28px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+  }
+  .ctrl-group { display: flex; flex-direction: column; gap: 5px; }
+  .ctrl-group label {
+    font-size: 11px; letter-spacing: 1.5px; color: var(--text-dim);
+    text-transform: uppercase; font-weight: 600;
+  }
+  select, .btn {
+    font-family: var(--font-ui); font-size: 14px; font-weight: 600;
+    padding: 8px 14px; border-radius: 4px; cursor: pointer;
+    outline: none; transition: all .15s;
+  }
+  select {
+    background: var(--bg3); color: var(--text-bright);
+    border: 1px solid var(--border-hi);
+    min-width: 180px;
+  }
+  select:hover { border-color: var(--cyan-dim); }
+
+  .btn-start {
+    background: linear-gradient(135deg, #003040 0%, #005060 100%);
+    color: var(--cyan); border: 1px solid var(--cyan-dim);
+    letter-spacing: 1px;
+  }
+  .btn-start:hover { background: linear-gradient(135deg,#005060,#008090); box-shadow: 0 0 12px var(--cyan-dim); }
+  .btn-start:active { transform: scale(.97); }
+  .btn-start.running {
+    background: linear-gradient(135deg, #400800, #702000);
+    color: var(--orange); border-color: var(--orange-dim);
+  }
+
+  .btn-reset {
+    background: var(--bg3); color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .btn-reset:hover { color: var(--text); border-color: var(--border-hi); }
+
+  .speed-group { display: flex; flex-direction: column; gap: 5px; }
+  .speed-group label { font-size: 11px; letter-spacing: 1.5px; color: var(--text-dim); text-transform: uppercase; font-weight: 600; }
+  input[type=range] {
+    accent-color: var(--cyan); width: 120px; cursor: pointer;
+  }
+  .speed-val { font-family: var(--font-mono); font-size: 12px; color: var(--cyan); }
+
+  /* ── RACE PANELS ── */
+  .race-wrap {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 1px; background: var(--border);
+    border-top: 1px solid var(--border);
+  }
+
+  .panel {
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    position: relative;
+  }
+
+  .panel-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 18px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .algo-badge {
+    font-family: var(--font-mono); font-size: 13px; font-weight: 700;
+    letter-spacing: 2px; padding: 4px 10px; border-radius: 3px;
+  }
+  .badge-dijk {
+    background: #001830; color: var(--cyan);
+    border: 1px solid var(--cyan-dim);
+    box-shadow: 0 0 8px rgba(0,212,255,0.15);
+  }
+  .badge-astar {
+    background: #200800; color: var(--orange);
+    border: 1px solid var(--orange-dim);
+    box-shadow: 0 0 8px rgba(255,113,53,0.15);
+  }
+  .panel-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .panel-desc  { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); margin-left: auto; }
+
+  canvas {
+    display: block; width: 100%;
+    background: transparent;
+    cursor: crosshair;
+  }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 1px; background: var(--border);
+    border-top: 1px solid var(--border);
+  }
+  .stats-panel {
+    padding: 14px 20px;
+    display: flex; gap: 24px; flex-wrap: wrap; align-items: center;
+  }
+  .stat-item { display: flex; flex-direction: column; gap: 3px; }
+  .stat-label { font-size: 10px; letter-spacing: 1.5px; color: var(--text-dim); text-transform: uppercase; }
+  .stat-value { font-family: var(--font-mono); font-size: 20px; font-weight: 700; }
+  .val-cyan   { color: var(--cyan); text-shadow: 0 0 10px rgba(0,212,255,.4); }
+  .val-orange { color: var(--orange); text-shadow: 0 0 10px rgba(255,113,53,.4); }
+  .val-green  { color: var(--green); text-shadow: 0 0 10px rgba(57,255,20,.4); }
+
+  /* ── WINNER BANNER ── */
+  .winner-banner {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(90deg, #001208, #003016, #001208);
+    border-top: 2px solid var(--green);
+    color: var(--green);
+    font-family: var(--font-mono); font-size: 14px; letter-spacing: 2px;
+    padding: 10px 28px;
+    display: flex; align-items: center; gap: 16px;
+    transform: translateY(100%); transition: transform .4s ease;
+    z-index: 100;
+    text-shadow: 0 0 10px var(--green);
+    box-shadow: 0 -4px 30px rgba(57,255,20,0.2);
+  }
+  .winner-banner.show { transform: translateY(0); }
+  .winner-banner .winner-icon { font-size: 22px; }
+
+  /* ── LEGEND ── */
+  .legend {
+    display: flex; gap: 20px; flex-wrap: wrap;
+    padding: 10px 28px;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--text-dim); letter-spacing: 1px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .leg-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* ── NODE INFO TOOLTIP ── */
+  .tooltip {
+    position: fixed;
+    background: var(--bg3); border: 1px solid var(--border-hi);
+    padding: 8px 12px; border-radius: 6px;
+    font-family: var(--font-mono); font-size: 11px;
+    pointer-events: none; opacity: 0; transition: opacity .15s;
+    z-index: 200; color: var(--text);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+  .tooltip.vis { opacity: 1; }
+
+  /* ── STEP COUNTER ── */
+  .step-overlay {
+    position: absolute; top: 10px; right: 12px;
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--text-dim); letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="pulse-dot"></div>
+  <h1>Cairo Emergency Router</h1>
+  <span class="tag">LIVE</span>
+  <div class="sub">CSE112 · Member 4 · A* vs Dijkstra Race</div>
+</header>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <div class="ctrl-group">
+    <label>Source Node</label>
+    <select id="selSource"></select>
+  </div>
+  <div class="ctrl-group">
+    <label>Target (Medical)</label>
+    <select id="selTarget">
+      <option value="F9">F9 — Qasr El Aini Hospital</option>
+      <option value="F10">F10 — Maadi Military Hospital</option>
+    </select>
+  </div>
+  <div class="ctrl-group">
+    <label>Time of Day</label>
+    <select id="selTime">
+      <option value="Morning">🌅 Morning (Peak)</option>
+      <option value="Afternoon">☀️ Afternoon (Light)</option>
+      <option value="Evening">🌆 Evening (Peak)</option>
+      <option value="Night">🌙 Night (Quiet)</option>
+    </select>
+  </div>
+  <div class="speed-group">
+    <label>Animation Speed</label>
+    <input type="range" id="rngSpeed" min="1" max="10" value="4">
+    <span class="speed-val" id="lblSpeed">×4</span>
+  </div>
+  <div class="ctrl-group">
+    <label>&nbsp;</label>
+    <button class="btn btn-start" id="btnStart">▶ START RACE</button>
+  </div>
+  <div class="ctrl-group">
+    <label>&nbsp;</label>
+    <button class="btn btn-reset" id="btnReset">↺ RESET</button>
+  </div>
+</div>
+
+<!-- RACE CANVASES -->
+<div class="race-wrap" id="raceWrap">
+  <div class="panel" id="panelDijk">
+    <div class="panel-header">
+      <span class="algo-badge badge-dijk">DIJKSTRA</span>
+      <span class="panel-title">Uniform Cost Search — h(n) = 0</span>
+      <span class="panel-desc">explores blindly outward</span>
+    </div>
+    <div style="position:relative;">
+      <canvas id="cvsDijk"></canvas>
+      <div class="step-overlay" id="stepDijk">STEP 0</div>
+    </div>
+  </div>
+  <div class="panel" id="panelAstar">
+    <div class="panel-header">
+      <span class="algo-badge badge-astar">A★ SEARCH</span>
+      <span class="panel-title">f(n) = g(n) + h(n) — Euclidean Heuristic</span>
+      <span class="panel-desc">guided toward goal</span>
+    </div>
+    <div style="position:relative;">
+      <canvas id="cvsAstar"></canvas>
+      <div class="step-overlay" id="stepAstar">STEP 0</div>
+    </div>
+  </div>
+</div>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stats-panel" id="statsDijk">
+    <div class="stat-item"><div class="stat-label">Nodes Explored</div><div class="stat-value val-cyan" id="dExplo">—</div></div>
+    <div class="stat-item"><div class="stat-label">Path Cost (km)</div><div class="stat-value val-cyan" id="dCost">—</div></div>
+    <div class="stat-item"><div class="stat-label">Path Length</div><div class="stat-value val-cyan" id="dLen">—</div></div>
+    <div class="stat-item"><div class="stat-label">Status</div><div class="stat-value" id="dStatus" style="font-size:13px;color:var(--text-dim);">WAITING</div></div>
+  </div>
+  <div class="stats-panel" id="statsAstar">
+    <div class="stat-item"><div class="stat-label">Nodes Explored</div><div class="stat-value val-orange" id="aExplo">—</div></div>
+    <div class="stat-item"><div class="stat-label">Path Cost (km)</div><div class="stat-value val-orange" id="aCost">—</div></div>
+    <div class="stat-item"><div class="stat-label">Path Length</div><div class="stat-value val-orange" id="aLen">—</div></div>
+    <div class="stat-item"><div class="stat-label">Status</div><div class="stat-value" id="aStatus" style="font-size:13px;color:var(--text-dim);">WAITING</div></div>
+  </div>
+</div>
+
+<!-- LEGEND -->
+<div class="legend">
+  <div class="legend-item"><div class="leg-dot" style="background:#4488ff"></div>Residential</div>
+  <div class="legend-item"><div class="leg-dot" style="background:#88aaff"></div>Business/Mixed</div>
+  <div class="legend-item"><div class="leg-dot" style="background:#ffaa22"></div>Government</div>
+  <div class="legend-item"><div class="leg-dot" style="background:#ff2255"></div>Medical (Target)</div>
+  <div class="legend-item"><div class="leg-dot" style="background:#55ffaa"></div>Facilities</div>
+  <div class="legend-item"><div class="leg-dot" style="background:#888"></div>Unexplored road</div>
+  <div class="legend-item"><div class="leg-dot" style="background:#39ff14;border-radius:0"></div>Found path</div>
+</div>
+
+<!-- TOOLTIP -->
+<div class="tooltip" id="tooltip"></div>
+
+<!-- WINNER BANNER -->
+<div class="winner-banner" id="winnerBanner">
+  <span class="winner-icon">🏆</span>
+  <span id="winnerText">A* WINS — explored fewer nodes!</span>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+//  GRAPH DATA  (embedded from nodes.csv + edges.csv)
+// ════════════════════════════════════════════════════════════════
+
+const NODES = {
+  '1':   { name:'Maadi',              x:31.25, y:29.96, type:'Residential', pop:250000 },
+  '2':   { name:'Nasr City',          x:31.34, y:30.06, type:'Mixed',       pop:500000 },
+  '3':   { name:'Downtown Cairo',     x:31.24, y:30.04, type:'Business',    pop:100000 },
+  '4':   { name:'New Cairo',          x:31.47, y:30.03, type:'Residential', pop:300000 },
+  '5':   { name:'Heliopolis',         x:31.32, y:30.09, type:'Mixed',       pop:200000 },
+  '6':   { name:'Zamalek',            x:31.22, y:30.06, type:'Residential', pop:50000  },
+  '7':   { name:'6th October City',   x:30.98, y:29.93, type:'Mixed',       pop:400000 },
+  '8':   { name:'Giza',               x:31.21, y:29.99, type:'Mixed',       pop:550000 },
+  '9':   { name:'Mohandessin',        x:31.20, y:30.05, type:'Business',    pop:180000 },
+  '10':  { name:'Dokki',              x:31.21, y:30.03, type:'Mixed',       pop:220000 },
+  '11':  { name:'Shubra',             x:31.24, y:30.11, type:'Residential', pop:450000 },
+  '12':  { name:'Helwan',             x:31.33, y:29.85, type:'Industrial',  pop:350000 },
+  '13':  { name:'New Admin Capital',  x:31.80, y:30.02, type:'Government',  pop:50000  },
+  '14':  { name:'Al Rehab',           x:31.49, y:30.06, type:'Residential', pop:120000 },
+  '15':  { name:'Sheikh Zayed',       x:30.94, y:30.01, type:'Residential', pop:150000 },
+  'F1':  { name:'Cairo Airport',      x:31.41, y:30.11, type:'Airport',     pop:0 },
+  'F2':  { name:'Ramses Station',     x:31.25, y:30.065,type:'Transit Hub', pop:0 },
+  'F3':  { name:'Cairo University',   x:31.205,y:30.03, type:'Education',   pop:0 },
+  'F4':  { name:'Al-Azhar Univ.',     x:31.26, y:30.05, type:'Education',   pop:0 },
+  'F5':  { name:'Egyptian Museum',    x:31.23, y:30.05, type:'Tourism',     pop:0 },
+  'F6':  { name:'Cairo Stadium',      x:31.30, y:30.07, type:'Sports',      pop:0 },
+  'F7':  { name:'Smart Village',      x:30.97, y:30.07, type:'Business',    pop:0 },
+  'F8':  { name:'Cairo Festival City',x:31.40, y:30.03, type:'Commercial',  pop:0 },
+  'F9':  { name:'Qasr El Aini Hosp.', x:31.231,y:30.031,type:'Medical',    pop:0 },
+  'F10': { name:'Maadi Mil. Hospital',x:31.25, y:29.955,type:'Medical',     pop:0 },
+};
+
+// All roads: [fromId, toId, distance, capacity, condition]
+const RAW_EDGES = [
+  ['1','3',8.5,3000,7],   ['1','8',6.2,2500,6],   ['2','3',5.9,2800,8],
+  ['2','5',4.0,3200,9],   ['3','5',6.1,3500,7],   ['3','6',3.2,2000,8],
+  ['3','9',4.5,2600,6],   ['3','10',3.8,2400,7],  ['4','2',15.2,3800,9],
+  ['4','14',5.3,3000,10], ['5','11',7.9,3100,7],  ['6','9',2.2,1800,8],
+  ['7','8',24.5,3500,8],  ['7','15',9.8,3000,9],  ['8','10',3.3,2200,7],
+  ['8','12',14.8,2600,5], ['9','10',2.1,1900,7],  ['10','11',8.7,2400,6],
+  ['11','F2',3.6,2200,7], ['12','1',12.7,2800,6], ['13','4',45.0,4000,10],
+  ['14','13',35.5,3800,9],['15','7',9.8,3000,9],  ['F1','5',7.5,3500,9],
+  ['F1','2',9.2,3200,8],  ['F2','3',2.5,2000,7],  ['F7','15',8.3,2800,8],
+  ['F8','4',6.1,3000,9],
+  // ── Synthetic proximity edges for medical facilities ──────────
+  // F9 (Qasr El Aini) is adjacent to Downtown Cairo & Dokki
+  ['3','F9',1.4,2000,8],  ['10','F9',1.8,1800,7],
+  // F10 (Maadi Military) is adjacent to Maadi
+  ['1','F10',1.1,2000,9],
+];
+
+// Traffic volumes from traffic.csv
+const TRAFFIC = {
+  '1-3':  {Morning:2800,Afternoon:1500,Evening:2600,Night:800},
+  '1-8':  {Morning:2200,Afternoon:1200,Evening:2100,Night:600},
+  '2-3':  {Morning:2700,Afternoon:1400,Evening:2500,Night:700},
+  '2-5':  {Morning:3000,Afternoon:1600,Evening:2800,Night:650},
+  '3-5':  {Morning:3200,Afternoon:1700,Evening:3100,Night:800},
+  '3-6':  {Morning:1800,Afternoon:1400,Evening:1900,Night:500},
+  '3-9':  {Morning:2400,Afternoon:1300,Evening:2200,Night:550},
+  '3-10': {Morning:2300,Afternoon:1200,Evening:2100,Night:500},
+  '4-2':  {Morning:3600,Afternoon:1800,Evening:3300,Night:750},
+  '4-14': {Morning:2800,Afternoon:1600,Evening:2600,Night:600},
+  '5-11': {Morning:2900,Afternoon:1500,Evening:2700,Night:650},
+  '6-9':  {Morning:1700,Afternoon:1300,Evening:1800,Night:450},
+  '7-8':  {Morning:3200,Afternoon:1700,Evening:3000,Night:700},
+  '7-15': {Morning:2800,Afternoon:1500,Evening:2600,Night:600},
+  '8-10': {Morning:2000,Afternoon:1100,Evening:1900,Night:450},
+  '8-12': {Morning:2400,Afternoon:1300,Evening:2200,Night:500},
+  '9-10': {Morning:1800,Afternoon:1200,Evening:1700,Night:400},
+  '10-11':{Morning:2200,Afternoon:1300,Evening:2100,Night:500},
+  '11-F2':{Morning:2100,Afternoon:1200,Evening:2000,Night:450},
+  '12-1': {Morning:2600,Afternoon:1400,Evening:2400,Night:550},
+  '13-4': {Morning:3800,Afternoon:2000,Evening:3500,Night:800},
+  '14-13':{Morning:3600,Afternoon:1900,Evening:3300,Night:750},
+  '15-7': {Morning:2800,Afternoon:1500,Evening:2600,Night:600},
+  'F1-5': {Morning:3300,Afternoon:2200,Evening:3100,Night:1200},
+  'F1-2': {Morning:3000,Afternoon:2000,Evening:2800,Night:1100},
+  'F2-3': {Morning:1900,Afternoon:1600,Evening:1800,Night:900},
+  'F7-15':{Morning:2600,Afternoon:1500,Evening:2400,Night:550},
+  'F8-4': {Morning:2800,Afternoon:1600,Evening:2600,Night:600},
+};
+
+// ════════════════════════════════════════════════════════════════
+//  BUILD ADJACENCY LIST
+// ════════════════════════════════════════════════════════════════
+
+const adjList = {};
+Object.keys(NODES).forEach(id => { adjList[id] = []; });
+
+function getTrafficKey(a, b) {
+  return TRAFFIC[`${a}-${b}`] ? `${a}-${b}` : (TRAFFIC[`${b}-${a}`] ? `${b}-${a}` : null);
+}
+
+function getDynamicWeight(fromId, toId, dist, capacity, timeOfDay) {
+  const key = getTrafficKey(fromId, toId);
+  if (key && TRAFFIC[key]) {
+    const vol = TRAFFIC[key][timeOfDay] || 1500;
+    const ratio = Math.min(vol / capacity, 1.0);
+    // Travel time (minutes) = distance / effective_speed
+    // effective_speed decreases with congestion
+    const effectiveSpeed = 60 * (1 - ratio * 0.7); // 60 km/h at 0% congestion → 18 km/h at 100%
+    return dist / effectiveSpeed * 60; // minutes
+  }
+  return dist; // fallback: 1 min/km
+}
+
+RAW_EDGES.forEach(([a, b, dist, cap, cond]) => {
+  if (adjList[a] !== undefined && adjList[b] !== undefined) {
+    adjList[a].push({ to: b, dist, cap, cond });
+    adjList[b].push({ to: a, dist, cap, cond });
+  }
+});
+
+// ════════════════════════════════════════════════════════════════
+//  MIN-HEAP (priority queue)
+// ════════════════════════════════════════════════════════════════
+
+class MinHeap {
+  constructor() { this.data = []; }
+  push(item) {
+    this.data.push(item);
+    this._bubbleUp(this.data.length - 1);
+  }
+  pop() {
+    if (this.data.length === 0) return null;
+    const top = this.data[0];
+    const last = this.data.pop();
+    if (this.data.length > 0) { this.data[0] = last; this._sinkDown(0); }
+    return top;
+  }
+  get size() { return this.data.length; }
+  _bubbleUp(i) {
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (this.data[p].f <= this.data[i].f) break;
+      [this.data[p], this.data[i]] = [this.data[i], this.data[p]];
+      i = p;
+    }
+  }
+  _sinkDown(i) {
+    const n = this.data.length;
+    while (true) {
+      let sm = i, l = 2*i+1, r = 2*i+2;
+      if (l < n && this.data[l].f < this.data[sm].f) sm = l;
+      if (r < n && this.data[r].f < this.data[sm].f) sm = r;
+      if (sm === i) break;
+      [this.data[sm], this.data[i]] = [this.data[i], this.data[sm]];
+      i = sm;
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  HEURISTIC — Euclidean distance (straight-line)
+// ════════════════════════════════════════════════════════════════
+
+function heuristic(nodeId, goalId) {
+  const a = NODES[nodeId], b = NODES[goalId];
+  if (!a || !b) return 0;
+  const dx = (a.x - b.x) * 88.8;   // km per degree lon at 30°N
+  const dy = (a.y - b.y) * 111.0;  // km per degree lat
+  return Math.sqrt(dx*dx + dy*dy);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  DIJKSTRA  (captures exploration steps)
+// ════════════════════════════════════════════════════════════════
+
+function runDijkstra(startId, goalId, timeOfDay) {
+  const g = { [startId]: 0 };
+  const parent = { [startId]: null };
+  const closed = new Set();
+  const steps = [];       // animation frames
+  const explored = [];    // node IDs in explored order
+  const heap = new MinHeap();
+  heap.push({ f: 0, g: 0, id: startId });
+
+  while (heap.size > 0) {
+    const { g: gCurr, id: curr } = heap.pop();
+    if (closed.has(curr)) continue;
+
+    closed.add(curr);
+    explored.push(curr);
+    steps.push({ type: 'explore', node: curr, g: gCurr, closed: new Set(closed) });
+
+    if (curr === goalId) {
+      const path = reconstructPath(parent, goalId);
+      steps.push({ type: 'found', path, cost: g[goalId] });
+      return { found: true, path, cost: g[goalId], explored, steps };
+    }
+
+    for (const edge of (adjList[curr] || [])) {
+      if (closed.has(edge.to)) continue;
+      const w = getDynamicWeight(curr, edge.to, edge.dist, edge.cap, timeOfDay);
+      const tentG = gCurr + w;
+      if (g[edge.to] === undefined || tentG < g[edge.to]) {
+        g[edge.to] = tentG;
+        parent[edge.to] = curr;
+        heap.push({ f: tentG, g: tentG, id: edge.to });
+        steps.push({ type: 'update', node: edge.to, via: curr, g: tentG });
+      }
+    }
+  }
+  return { found: false, path: [], cost: Infinity, explored, steps };
+}
+
+// ════════════════════════════════════════════════════════════════
+//  A*  (captures exploration steps)
+// ════════════════════════════════════════════════════════════════
+
+function runAstar(startId, goalId, timeOfDay) {
+  const g = { [startId]: 0 };
+  const parent = { [startId]: null };
+  const closed = new Set();
+  const steps = [];
+  const explored = [];
+  const heap = new MinHeap();
+  const h0 = heuristic(startId, goalId);
+  heap.push({ f: h0, g: 0, id: startId });
+
+  while (heap.size > 0) {
+    const { f: fCurr, g: gCurr, id: curr } = heap.pop();
+    if (closed.has(curr)) continue;
+
+    closed.add(curr);
+    explored.push(curr);
+    const hCurr = heuristic(curr, goalId);
+    steps.push({ type: 'explore', node: curr, g: gCurr, h: hCurr, f: fCurr, closed: new Set(closed) });
+
+    if (curr === goalId) {
+      const path = reconstructPath(parent, goalId);
+      steps.push({ type: 'found', path, cost: g[goalId] });
+      return { found: true, path, cost: g[goalId], explored, steps };
+    }
+
+    for (const edge of (adjList[curr] || [])) {
+      if (closed.has(edge.to)) continue;
+      const w = getDynamicWeight(curr, edge.to, edge.dist, edge.cap, timeOfDay);
+      const tentG = gCurr + w;
+      if (g[edge.to] === undefined || tentG < g[edge.to]) {
+        g[edge.to] = tentG;
+        parent[edge.to] = curr;
+        const h = heuristic(edge.to, goalId);
+        const f = tentG + h;
+        heap.push({ f, g: tentG, id: edge.to });
+        steps.push({ type: 'update', node: edge.to, via: curr, g: tentG, h, f });
+      }
+    }
+  }
+  return { found: false, path: [], cost: Infinity, explored, steps };
+}
+
+function reconstructPath(parent, goalId) {
+  const path = [];
+  let cur = goalId;
+  while (cur !== null && cur !== undefined) {
+    path.push(cur);
+    cur = parent[cur];
+  }
+  return path.reverse();
+}
+
+// ════════════════════════════════════════════════════════════════
+//  COORDINATE MAPPING  (geo → canvas pixels)
+// ════════════════════════════════════════════════════════════════
+
+const LON_MIN = 30.94, LON_MAX = 31.80;
+const LAT_MIN = 29.85, LAT_MAX = 30.11;
+
+function toCanvas(nodeId, W, H) {
+  const n = NODES[nodeId];
+  if (!n) return { x: 0, y: 0 };
+  const PAD_X = 52, PAD_Y = 42;
+  const uw = W - PAD_X * 2, uh = H - PAD_Y * 2;
+  const cx = PAD_X + ((n.x - LON_MIN) / (LON_MAX - LON_MIN)) * uw;
+  const cy = PAD_Y + (1 - (n.y - LAT_MIN) / (LAT_MAX - LAT_MIN)) * uh;
+  return { x: cx, y: cy };
+}
+
+// ════════════════════════════════════════════════════════════════
+//  NODE COLOURS
+// ════════════════════════════════════════════════════════════════
+
+function nodeColor(type) {
+  switch (type) {
+    case 'Medical':     return '#ff2255';
+    case 'Government':  return '#ffaa22';
+    case 'Education':   return '#aa88ff';
+    case 'Airport':     return '#55ffaa';
+    case 'Transit Hub': return '#55ffaa';
+    case 'Business':    return '#88aaff';
+    case 'Commercial':  return '#55ffaa';
+    case 'Sports':      return '#55ffaa';
+    case 'Tourism':     return '#55ffaa';
+    case 'Residential': return '#4488ff';
+    case 'Mixed':       return '#77aaff';
+    case 'Industrial':  return '#aaaaaa';
+    default:            return '#888888';
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  CANVAS RENDERER
+// ════════════════════════════════════════════════════════════════
+
+class GraphRenderer {
+  constructor(canvasId, algoColor, algoName) {
+    this.canvas   = document.getElementById(canvasId);
+    this.ctx      = this.canvas.getContext('2d');
+    this.color    = algoColor;   // '#00d4ff' or '#ff7135'
+    this.name     = algoName;
+    this.explored = new Set();
+    this.frontier = new Set();
+    this.path     = [];
+    this.currentNode = null;
+    this.resize();
+  }
+
+  resize() {
+    const rect = this.canvas.parentElement.getBoundingClientRect();
+    const W = Math.floor(rect.width) || 560;
+    const H = Math.round(W * 0.56);
+    this.canvas.width  = W;
+    this.canvas.height = H;
+    this.W = W; this.H = H;
+  }
+
+  clear() {
+    this.explored.clear();
+    this.frontier.clear();
+    this.path = [];
+    this.currentNode = null;
+    this.draw();
+  }
+
+  draw() {
+    const { ctx, W, H } = this;
+    ctx.clearRect(0, 0, W, H);
+
+    // Background subtle vignette
+    const vg = ctx.createRadialGradient(W/2, H/2, H*0.1, W/2, H/2, H*0.8);
+    vg.addColorStop(0, 'rgba(13,18,40,0)');
+    vg.addColorStop(1, 'rgba(6,9,26,0.7)');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Draw edges
+    RAW_EDGES.forEach(([a, b]) => {
+      const pa = toCanvas(a, W, H), pb = toCanvas(b, W, H);
+      const inPath = this.path.length > 1 &&
+        this.path.some((n, i) => i < this.path.length - 1 &&
+          ((n === a && this.path[i+1] === b) || (n === b && this.path[i+1] === a)));
+
+      if (inPath) {
+        ctx.strokeStyle = '#39ff14';
+        ctx.lineWidth = 3.5;
+        ctx.shadowColor = '#39ff14';
+        ctx.shadowBlur = 10;
+        ctx.setLineDash([]);
+      } else if (this.explored.has(a) && this.explored.has(b)) {
+        ctx.strokeStyle = this.color + '55';
+        ctx.lineWidth = 1.5;
+        ctx.shadowBlur = 0;
+        ctx.setLineDash([]);
+      } else {
+        ctx.strokeStyle = 'rgba(30,42,80,0.7)';
+        ctx.lineWidth = 1;
+        ctx.shadowBlur = 0;
+        ctx.setLineDash([4, 4]);
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(pa.x, pa.y);
+      ctx.lineTo(pb.x, pb.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.shadowBlur = 0;
+    });
+
+    // Draw nodes
+    Object.entries(NODES).forEach(([id, node]) => {
+      const p = toCanvas(id, W, H);
+      const isMedical  = node.type === 'Medical';
+      const isCurrent  = id === this.currentNode;
+      const isExplored = this.explored.has(id);
+      const isFrontier = this.frontier.has(id);
+      const isInPath   = this.path.includes(id);
+
+      let radius = isMedical ? 10 : (id.startsWith('F') ? 7 : 8);
+      let fill   = nodeColor(node.type);
+      let glow   = 0;
+
+      if (isCurrent) {
+        radius = 13; glow = 20;
+        ctx.shadowColor = this.color;
+        ctx.shadowBlur  = glow;
+      } else if (isInPath && this.path.length > 1) {
+        glow = 14;
+        ctx.shadowColor = '#39ff14';
+        ctx.shadowBlur  = glow;
+        fill = '#39ff14';
+      } else if (isExplored) {
+        ctx.shadowColor = this.color;
+        ctx.shadowBlur  = 6;
+        fill = this.color;
+      } else if (isFrontier) {
+        ctx.shadowColor = this.color + '99';
+        ctx.shadowBlur  = 4;
+      } else {
+        ctx.shadowBlur = 0;
+        fill = nodeColor(node.type) + '55';
+      }
+
+      // Outer ring for medical targets
+      if (isMedical) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, radius + 5, 0, Math.PI * 2);
+        ctx.strokeStyle = '#ff2255';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 3]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.strokeStyle = isCurrent ? this.color : (isExplored ? this.color + 'aa' : '#1e2a50');
+      ctx.lineWidth = isCurrent ? 2.5 : 1.5;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Label
+      const showLabel = isExplored || isInPath || isCurrent || isMedical;
+      if (showLabel || true) {  // always show labels
+        ctx.font = isMedical
+          ? `bold 11px 'Rajdhani', sans-serif`
+          : `${isExplored || isCurrent ? 'bold ' : ''}10px 'Rajdhani', sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillStyle = isInPath && this.path.length > 1
+          ? '#39ff14'
+          : (isExplored || isCurrent ? '#e8f4ff' : '#3a5080');
+        const shortName = node.name.split(' ').slice(0, 2).join(' ');
+        const ly = p.y + radius + 12;
+        ctx.fillText(shortName, p.x, ly);
+      }
+    });
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  ANIMATION ENGINE
+// ════════════════════════════════════════════════════════════════
+
+let rendererD, rendererA;
+let dijkResult, astarResult;
+let frameId = null;
+let animState = { dStep: 0, aStep: 0, done: false, started: false };
+let speed = 4;
+
+function getStepDelay() {
+  // steps per animation frame (higher speed = more steps per frame)
+  return Math.max(1, Math.round(speed * 0.7));
+}
+
+function initRenderers() {
+  rendererD = new GraphRenderer('cvsDijk',  '#00d4ff', 'Dijkstra');
+  rendererA = new GraphRenderer('cvsAstar', '#ff7135', 'A*');
+}
+
+function resetAll() {
+  cancelAnimationFrame(frameId);
+  animState = { dStep: 0, aStep: 0, done: false, started: false };
+
+  if (rendererD) rendererD.clear();
+  if (rendererA) rendererA.clear();
+
+  document.getElementById('dExplo').textContent = '—';
+  document.getElementById('dCost').textContent  = '—';
+  document.getElementById('dLen').textContent   = '—';
+  document.getElementById('dStatus').textContent = 'WAITING';
+  document.getElementById('dStatus').style.color = 'var(--text-dim)';
+  document.getElementById('aExplo').textContent = '—';
+  document.getElementById('aCost').textContent  = '—';
+  document.getElementById('aLen').textContent   = '—';
+  document.getElementById('aStatus').textContent = 'WAITING';
+  document.getElementById('aStatus').style.color = 'var(--text-dim)';
+  document.getElementById('stepDijk').textContent = 'STEP 0';
+  document.getElementById('stepAstar').textContent = 'STEP 0';
+
+  const banner = document.getElementById('winnerBanner');
+  banner.classList.remove('show');
+
+  const btn = document.getElementById('btnStart');
+  btn.textContent = '▶ START RACE';
+  btn.classList.remove('running');
+}
+
+function applyStep(renderer, step, elExplo, elStatus) {
+  if (!step) return;
+  if (step.type === 'explore') {
+    renderer.explored.add(step.node);
+    renderer.frontier.delete(step.node);
+    renderer.currentNode = step.node;
+    elExplo.textContent = renderer.explored.size;
+    elStatus.textContent = 'SEARCHING...';
+    elStatus.style.color = 'var(--text-dim)';
+  } else if (step.type === 'update') {
+    renderer.frontier.add(step.node);
+  } else if (step.type === 'found') {
+    renderer.path = step.path;
+    renderer.currentNode = null;
+    elStatus.textContent = '✓ PATH FOUND';
+    elStatus.style.color = 'var(--green)';
+  }
+}
+
+function animate() {
+  if (animState.done) return;
+
+  const stepsPerFrame = getStepDelay();
+  const dSteps = dijkResult.steps;
+  const aSteps = astarResult.steps;
+
+  for (let i = 0; i < stepsPerFrame; i++) {
+    if (animState.dStep < dSteps.length) {
+      applyStep(rendererD, dSteps[animState.dStep],
+        document.getElementById('dExplo'),
+        document.getElementById('dStatus'));
+      animState.dStep++;
+    }
+    if (animState.aStep < aSteps.length) {
+      applyStep(rendererA, aSteps[animState.aStep],
+        document.getElementById('aExplo'),
+        document.getElementById('aStatus'));
+      animState.aStep++;
+    }
+  }
+
+  // Update step counters
+  document.getElementById('stepDijk').textContent  = `STEP ${animState.dStep}`;
+  document.getElementById('stepAstar').textContent = `STEP ${animState.aStep}`;
+
+  rendererD.draw();
+  rendererA.draw();
+
+  // Update cost + path length when found
+  if (dijkResult.found && rendererD.path.length > 0) {
+    document.getElementById('dCost').textContent = dijkResult.cost.toFixed(2);
+    document.getElementById('dLen').textContent  = dijkResult.path.length;
+  }
+  if (astarResult.found && rendererA.path.length > 0) {
+    document.getElementById('aCost').textContent = astarResult.cost.toFixed(2);
+    document.getElementById('aLen').textContent  = astarResult.path.length;
+  }
+
+  const bothDone = animState.dStep >= dSteps.length && animState.aStep >= aSteps.length;
+  if (bothDone) {
+    animState.done = true;
+    showWinner();
+    const btn = document.getElementById('btnStart');
+    btn.textContent = '▶ RUN AGAIN';
+    btn.classList.remove('running');
+    return;
+  }
+
+  frameId = requestAnimationFrame(animate);
+}
+
+function showWinner() {
+  const dN = dijkResult.explored.length;
+  const aN = astarResult.explored.length;
+  const saved = dN - aN;
+  const pct   = Math.round(saved / dN * 100);
+
+  let msg;
+  if (!dijkResult.found && !astarResult.found) {
+    msg = '⚠ No path found by either algorithm!';
+  } else if (!dijkResult.found) {
+    msg = '🏆 A* found a path — Dijkstra failed!';
+  } else if (!astarResult.found) {
+    msg = 'Dijkstra found a path — A* failed (unexpected)';
+  } else if (saved > 0) {
+    msg = `🏆 A★ WINS! Explored ${saved} fewer nodes (${pct}% more efficient) · Same optimal cost: ${astarResult.cost.toFixed(2)} min`;
+  } else if (saved === 0) {
+    msg = `TIE — Both explored ${aN} nodes · Optimal cost: ${astarResult.cost.toFixed(2)} min`;
+  } else {
+    msg = `Dijkstra wins this route — A* explored ${-saved} more nodes`;
+  }
+
+  document.getElementById('winnerText').textContent = msg;
+  document.getElementById('winnerBanner').classList.add('show');
+}
+
+// ════════════════════════════════════════════════════════════════
+//  UI SETUP
+// ════════════════════════════════════════════════════════════════
+
+function populateSourceSelect() {
+  const sel = document.getElementById('selSource');
+  const nonMedical = Object.entries(NODES)
+    .filter(([id, n]) => n.type !== 'Medical')
+    .sort((a, b) => a[1].name.localeCompare(b[1].name));
+
+  nonMedical.forEach(([id, n]) => {
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = `${id} — ${n.name}`;
+    if (id === '4') opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function handleStart() {
+  const btn = document.getElementById('btnStart');
+
+  if (animState.started && !animState.done) {
+    // Pause
+    cancelAnimationFrame(frameId);
+    animState.started = false;
+    btn.textContent = '▶ RESUME';
+    btn.classList.remove('running');
+    return;
+  }
+
+  if (animState.started && animState.done) {
+    resetAll();
+    return;
+  }
+
+  if (!animState.started && animState.dStep > 0) {
+    // Resume after pause
+    animState.started = true;
+    btn.textContent = '⏸ PAUSE';
+    btn.classList.add('running');
+    frameId = requestAnimationFrame(animate);
+    return;
+  }
+
+  // Fresh start
+  const sourceId = document.getElementById('selSource').value;
+  const targetId = document.getElementById('selTarget').value;
+  const timeOfDay = document.getElementById('selTime').value;
+
+  resetAll();
+
+  dijkResult  = runDijkstra(sourceId, targetId, timeOfDay);
+  astarResult = runAstar(sourceId, targetId, timeOfDay);
+
+  animState.started = true;
+  btn.textContent = '⏸ PAUSE';
+  btn.classList.add('running');
+
+  frameId = requestAnimationFrame(animate);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  TOOLTIP ON HOVER
+// ════════════════════════════════════════════════════════════════
+
+function setupTooltip(canvasId, renderer) {
+  const canvas  = document.getElementById(canvasId);
+  const tooltip = document.getElementById('tooltip');
+
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const my = (e.clientY - rect.top)  * (canvas.height / rect.height);
+
+    let closest = null, closestDist = 999;
+    Object.entries(NODES).forEach(([id, n]) => {
+      const p = toCanvas(id, renderer.W, renderer.H);
+      const d = Math.hypot(p.x - mx, p.y - my);
+      if (d < closestDist) { closestDist = d; closest = id; }
+    });
+
+    if (closest && closestDist < 20) {
+      const n = NODES[closest];
+      const explored = renderer ? renderer.explored.has(closest) : false;
+      tooltip.innerHTML =
+        `<b style="color:#e8f4ff">${n.name}</b><br>` +
+        `ID: ${closest} · ${n.type}<br>` +
+        (n.pop > 0 ? `Pop: ${n.pop.toLocaleString()}<br>` : '') +
+        `Status: ${explored ? '<span style="color:var(--green)">Explored</span>' : '<span style="color:var(--text-dim)">Unexplored</span>'}`;
+      tooltip.style.left = (e.clientX + 14) + 'px';
+      tooltip.style.top  = (e.clientY - 10) + 'px';
+      tooltip.classList.add('vis');
+    } else {
+      tooltip.classList.remove('vis');
+    }
+  });
+
+  canvas.addEventListener('mouseleave', () => tooltip.classList.remove('vis'));
+}
+
+// ════════════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════════════
+
+window.addEventListener('DOMContentLoaded', () => {
+  populateSourceSelect();
+  initRenderers();
+
+  // Draw initial empty graph
+  rendererD.draw();
+  rendererA.draw();
+
+  setupTooltip('cvsDijk',  rendererD);
+  setupTooltip('cvsAstar', rendererA);
+
+  document.getElementById('btnStart').addEventListener('click', handleStart);
+  document.getElementById('btnReset').addEventListener('click', resetAll);
+
+  document.getElementById('rngSpeed').addEventListener('input', (e) => {
+    speed = parseInt(e.target.value);
+    document.getElementById('lblSpeed').textContent = `×${speed}`;
+  });
+
+  window.addEventListener('resize', () => {
+    rendererD.resize(); rendererD.draw();
+    rendererA.resize(); rendererA.draw();
+  });
+});
+</script>
+</body>
+</html>

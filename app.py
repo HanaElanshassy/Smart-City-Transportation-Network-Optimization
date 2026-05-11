@@ -1112,13 +1112,12 @@ def page_infrastructure(graph):
 
             st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
 
-            import io
             fig_heat = plot_condition_heatmap(edges, nodes, result)
-            buf = io.BytesIO()
-            fig_heat.savefig(buf, format="png", dpi=130, bbox_inches="tight",
-                             facecolor="#060b14")
-            buf.seek(0)
-            st.image(buf)
+            st.plotly_chart(
+                fig_heat,
+                use_container_width=True,
+                config={"displayModeBar": False},
+            )
 
 
 # ─────────────────────────────────────────────

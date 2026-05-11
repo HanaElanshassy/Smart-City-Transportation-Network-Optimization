@@ -17,5 +17,4 @@ Deploy from:
 https://share.streamlit.io/
 ```
 
-Streamlit Cloud will install Python dependencies from `requirements.txt` and
-system packages from `packages.txt`.
+Streamlit Cloud will install Python dependencies from `requirements.txt`.

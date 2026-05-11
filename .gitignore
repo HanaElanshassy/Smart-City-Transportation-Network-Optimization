@@ -3,6 +3,5 @@ __pycache__/
 .venv/
 venv/
 env/
-.streamlit/
 *.log
 *.zip

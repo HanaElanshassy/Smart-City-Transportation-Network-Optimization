@@ -146,8 +146,8 @@ def demo_mst(graph: CairoGraph, save_png: bool = True):
 
     if save_png:
         fig = visualize_infrastructure(graph, chosen)
-        out = p("mst_infrastructure.png")
-        fig.savefig(out, dpi=150, bbox_inches='tight')
+        out = p("mst_infrastructure.html")
+        fig.write_html(out)
         print(f"\n  📊 Map saved → {out}")
 
     return result

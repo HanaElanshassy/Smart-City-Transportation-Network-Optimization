@@ -13,39 +13,33 @@ Public API (used by the main app / UI):
     graph.load_data('nodes.csv', 'edges.csv')
 
     result = plan_new_infrastructure(graph)
-    # result['chosen_roads']  -> list of Edge objects selected by MST
-    # result['total_cost']    -> float, total construction cost in Million EGP
-    # result['savings']       -> float, cost saved via priority discounts
+    # result['chosen_roads'] -> list of Edge objects selected by MST
+    # result['total_cost']   -> float, total construction cost in Million EGP
+    # result['savings']      -> float, cost saved via priority discounts
 
     fig = visualize_infrastructure(graph, result['chosen_roads'])
-    fig.savefig('mst_map.png', dpi=150, bbox_inches='tight')
+    fig.write_html('mst_map.html')
 """
 
-import matplotlib
-matplotlib.use('Agg')   # non-interactive backend — safe for servers and Vercel
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-import networkx as nx
 from data_loader1 import CairoGraph
 
+
 # Nodes that receive a 50% construction-cost discount to ensure
-# Kruskal's prioritises connecting them early.
-PRIORITY_NODES = {'8', '2', 'F9'}   # Giza, Nasr City, Qasr El Aini Hospital
+# Kruskal's prioritizes connecting them early.
+PRIORITY_NODES = {"8", "2", "F9"}  # Giza, Nasr City, Qasr El Aini Hospital
 PRIORITY_DISCOUNT = 0.5
 
 
-# ─────────────────────────────────────────────
 # UNION-FIND
-# ─────────────────────────────────────────────
 
 class UnionFind:
     def __init__(self, elements):
         self.parent = {el: el for el in elements}
-        self.rank   = {el: 0  for el in elements}
+        self.rank = {el: 0 for el in elements}
 
     def find(self, item):
         if self.parent[item] != item:
-            self.parent[item] = self.find(self.parent[item])  # path compression
+            self.parent[item] = self.find(self.parent[item])
         return self.parent[item]
 
     def union(self, a, b) -> bool:
@@ -60,125 +54,224 @@ class UnionFind:
         return True
 
 
-# ─────────────────────────────────────────────
 # KRUSKAL'S ALGORITHM
-# ─────────────────────────────────────────────
 
 def plan_new_infrastructure(graph: CairoGraph) -> dict:
     """
     Run Kruskal's MST on potential new roads to find the most cost-effective
     expansion plan, with priority discounts for Giza, Nasr City, and F9.
 
+    Complexity analysis:
+        Time Complexity: O(E log E), equivalently O(E log V) for a simple graph.
+            Building the candidate edge list takes O(E). Sorting those edges by
+            adjusted construction cost dominates at O(E log E). The union-find
+            pass performs find/union with path compression and union by rank, so
+            processing all edges is O(E alpha(V)), effectively near constant per
+            operation.
+
+        Space Complexity: O(V + E).
+            The parent and rank dictionaries store one entry per node, requiring
+            O(V) space. The weighted candidate list and seen_candidates set scale
+            with the number of edges, requiring O(E) space. chosen_roads stores
+            at most V - 1 selected roads, so the total memory footprint is
+            O(V + E).
+
     Args:
         graph : loaded CairoGraph instance
 
     Returns:
         dict with keys:
-            'chosen_roads' : list[Edge]  — edges selected by MST
-            'total_cost'   : float       — actual construction cost (Million EGP)
-            'savings'      : float       — cost saved from priority discounts
+            'chosen_roads' : list[Edge] - edges selected by MST
+            'total_cost'   : float      - actual construction cost (Million EGP)
+            'savings'      : float      - cost saved from priority discounts
     """
     uf = UnionFind(graph.nodes.keys())
 
-    # Pre-connect all nodes that already have existing roads
+    # Pre-connect the base road network. Facility connectors with construction
+    # costs are usable for routing, but still remain candidates for this
+    # infrastructure-planning demo.
     for edge in graph.get_existing_edges():
-        uf.union(edge.from_id, edge.to_id)
+        if edge.cost == 0:
+            uf.union(edge.from_id, edge.to_id)
 
-    # Apply priority discount and sort by modified cost
     weighted = []
-    for edge in graph.get_potential_edges():
+    seen_candidates = set()
+    for edge in graph.edges:
+        if edge.cost <= 0:
+            continue
+        key = tuple(sorted([edge.from_id, edge.to_id]))
+        if key in seen_candidates:
+            continue
+        seen_candidates.add(key)
         is_priority = edge.from_id in PRIORITY_NODES or edge.to_id in PRIORITY_NODES
-        discount    = PRIORITY_DISCOUNT if is_priority else 1.0
+        discount = PRIORITY_DISCOUNT if is_priority else 1.0
         weighted.append((edge.cost * discount, edge.cost, edge))
     weighted.sort(key=lambda x: x[0])
 
     chosen_roads = []
-    total_cost   = 0.0
-    savings      = 0.0
+    total_cost = 0.0
+    savings = 0.0
 
     for modified_cost, actual_cost, edge in weighted:
         if uf.union(edge.from_id, edge.to_id):
             chosen_roads.append(edge)
             total_cost += actual_cost
-            savings    += actual_cost - modified_cost
+            savings += actual_cost - modified_cost
 
     return {
-        'chosen_roads': chosen_roads,
-        'total_cost':   total_cost,
-        'savings':      savings,
+        "chosen_roads": chosen_roads,
+        "total_cost": total_cost,
+        "savings": savings,
     }
 
 
-# ─────────────────────────────────────────────
 # VISUALIZATION
-# ─────────────────────────────────────────────
 
-def visualize_infrastructure(graph: CairoGraph, chosen_roads: list) -> plt.Figure:
+def visualize_infrastructure(graph: CairoGraph, chosen_roads: list):
     """
-    Generate a matplotlib map of Cairo's road network showing existing roads
-    and the MST-selected new roads.
+    Generate a real Plotly Mapbox Cairo map showing existing roads and the
+    MST-selected new roads.
 
     Args:
         graph         : loaded CairoGraph instance
         chosen_roads  : list of Edge objects returned by plan_new_infrastructure()
 
     Returns:
-        matplotlib Figure (caller is responsible for saving or displaying it)
+        Plotly Figure (caller is responsible for displaying or saving it)
     """
-    G   = nx.Graph()
-    pos = {}
+    import plotly.graph_objects as go
 
-    # Node colour scheme
-    node_colors = []
+    fig = go.Figure()
+    chosen_keys = {
+        tuple(sorted([edge.from_id, edge.to_id]))
+        for edge in chosen_roads
+    }
+
+    def add_road_trace(edge, color, width, opacity=1.0, name=None, showlegend=False):
+        n_from = graph.get_node(edge.from_id)
+        n_to = graph.get_node(edge.to_id)
+        if not n_from or not n_to:
+            return
+
+        line = dict(color=color, width=width)
+
+        fig.add_trace(go.Scattermapbox(
+            lon=[n_from.x, n_to.x],
+            lat=[n_from.y, n_to.y],
+            mode="lines",
+            line=line,
+            opacity=opacity,
+            hoverinfo="text",
+            hovertext=(
+                f"{n_from.name} -> {n_to.name}<br>"
+                f"Distance: {edge.distance} km<br>"
+                f"Condition: {edge.condition}/10"
+                + (f"<br>Cost: {edge.cost:.0f}M EGP" if edge.cost > 0 else "")
+            ),
+            name=name,
+            showlegend=showlegend,
+        ))
+
+    for edge in graph.get_existing_edges():
+        add_road_trace(edge, "#4a7a9b", 2.0)
+
+    for edge in graph.get_potential_edges():
+        key = tuple(sorted([edge.from_id, edge.to_id]))
+        if key not in chosen_keys:
+            add_road_trace(edge, "#2244aa", 1.2, opacity=0.35)
+
+    for i, edge in enumerate(chosen_roads):
+        add_road_trace(
+            edge,
+            "#00ff88",
+            4.0,
+            opacity=1.0,
+            name="Proposed New Road (MST)" if i == 0 else None,
+            showlegend=(i == 0),
+        )
+
+    node_palette = {
+        "Medical": "#ff3366",
+        "Government": "#aa44ff",
+        "Business": "#00aaff",
+        "Mixed": "#00ccaa",
+        "Residential": "#4488cc",
+        "Industrial": "#ff8800",
+        "Airport": "#ffdd00",
+        "Transit Hub": "#ff8844",
+        "Education": "#44ddff",
+        "Tourism": "#ff44aa",
+        "Sports": "#44ff88",
+        "Commercial": "#ffaa00",
+    }
+
+    by_type = {}
     for node_id, node in graph.nodes.items():
-        G.add_node(node_id, label=node.name)
-        pos[node_id] = (node.x, node.y)
+        node_type = node.type
+        by_type.setdefault(
+            node_type,
+            {"lons": [], "lats": [], "texts": [], "labels": [], "sizes": []},
+        )
+        priority = node_id in PRIORITY_NODES
+        by_type[node_type]["lons"].append(node.x)
+        by_type[node_type]["lats"].append(node.y)
+        by_type[node_type]["labels"].append(node.name)
+        by_type[node_type]["sizes"].append(14 if priority or node.is_medical else 9)
+        by_type[node_type]["texts"].append(
+            f"<b>{node.name}</b><br>"
+            f"ID: {node.id}<br>"
+            f"Type: {node.type}"
+            + (f"<br>Population: {int(node.population):,}" if node.population > 0 else "")
+            + ("<br>Priority target" if priority else "")
+        )
 
-        if node.is_medical:
-            node_colors.append('#e74c3c')       # red  — medical facilities
-        elif node_id in PRIORITY_NODES:
-            node_colors.append('#f1c40f')       # gold — priority targets
-        elif node.is_facility:
-            node_colors.append('#e67e22')       # orange — other facilities
-        else:
-            node_colors.append('#aed6f1')       # blue  — regular neighbourhoods
+    for node_type, data in by_type.items():
+        fig.add_trace(go.Scattermapbox(
+            lon=data["lons"],
+            lat=data["lats"],
+            mode="markers+text",
+            marker=dict(
+                size=data["sizes"],
+                color=node_palette.get(node_type, "#aaccee"),
+                opacity=0.96,
+                symbol="circle",
+            ),
+            text=data["labels"],
+            textposition="top right",
+            textfont=dict(color="#c8e0f4", size=8),
+            hovertext=data["texts"],
+            hoverinfo="text",
+            name=node_type,
+        ))
 
-    existing_edgelist = [(e.from_id, e.to_id) for e in graph.get_existing_edges()]
-    new_edgelist      = [(e.from_id, e.to_id) for e in chosen_roads]
-
-    G.add_edges_from(existing_edgelist)
-    G.add_edges_from(new_edgelist)
-
-    fig, ax = plt.subplots(figsize=(16, 11))
-
-    # Nodes
-    nx.draw_networkx_nodes(G, pos, node_size=500, node_color=node_colors,
-                           edgecolors='black', linewidths=0.8, ax=ax)
-
-    # Existing roads
-    nx.draw_networkx_edges(G, pos, edgelist=existing_edgelist,
-                           width=1.5, edge_color='#7f8c8d', alpha=0.6, ax=ax)
-
-    # New MST roads
-    nx.draw_networkx_edges(G, pos, edgelist=new_edgelist,
-                           width=3.0, edge_color='#27ae60', style='dashed', ax=ax)
-
-    # Labels
-    nx.draw_networkx_labels(G, pos, nx.get_node_attributes(G, 'label'),
-                            font_size=7, font_weight='bold', ax=ax)
-
-    # Legend
-    legend_handles = [
-        mpatches.Patch(color='#e74c3c', label='Medical Facility'),
-        mpatches.Patch(color='#f1c40f', label='Priority Node (Giza / Nasr City / F9)'),
-        mpatches.Patch(color='#e67e22', label='Other Facility'),
-        mpatches.Patch(color='#aed6f1', label='Neighbourhood'),
-        mpatches.Patch(color='#7f8c8d', label='Existing Road'),
-        mpatches.Patch(color='#27ae60', label='Proposed New Road (MST)'),
-    ]
-    ax.legend(handles=legend_handles, loc='lower left', fontsize=9)
-    ax.set_title("Cairo Smart City — Infrastructure Expansion Plan (Kruskal's MST)", fontsize=15)
-    ax.axis('off')
-    fig.tight_layout()
+    fig.update_layout(
+        mapbox=dict(
+            style="carto-darkmatter",
+            center=dict(lat=30.03, lon=31.25),
+            zoom=10.3,
+        ),
+        paper_bgcolor="#060b14",
+        plot_bgcolor="#060b14",
+        margin=dict(l=0, r=0, t=30, b=0),
+        height=580,
+        title=dict(
+            text="Cairo Smart City - Infrastructure Expansion Plan (Kruskal's MST)",
+            font=dict(color="#e8f4ff", size=16),
+            x=0.02,
+            y=0.98,
+        ),
+        legend=dict(
+            bgcolor="rgba(10, 22, 40, 0.82)",
+            bordercolor="#1a3a5c",
+            borderwidth=1,
+            font=dict(color="#8ba8cc", size=10),
+            x=0.01,
+            y=0.98,
+        ),
+        hoverlabel=dict(
+            bgcolor="#0d1e35",
+            bordercolor="#1a3a5c",
+            font=dict(color="#e0f0ff", size=11),
+        ),
+    )
     return fig
-    

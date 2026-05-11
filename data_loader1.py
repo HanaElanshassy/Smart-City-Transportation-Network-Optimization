@@ -63,11 +63,11 @@ class Edge:
 
     @property
     def is_existing(self):
-        return self.cost == 0
+        return self.cost == 0 or self.from_id.startswith("F") or self.to_id.startswith("F")
 
     @property
     def is_potential(self):
-        return self.cost > 0
+        return not self.is_existing
 
     def __repr__(self):
         tag = "existing" if self.is_existing else f"potential(cost={self.cost}M)"

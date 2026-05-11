@@ -464,7 +464,7 @@ def build_map(
             + (" [potential]" if is_potential else "")
         )
 
-        fig.add_trace(go.Scattermap(
+        fig.add_trace(go.Scattermapbox(
             lon=lx, lat=ly, mode="lines",
             line=dict(color=color, width=w),
             hoverinfo="text", hovertext=hover,
@@ -482,21 +482,21 @@ def build_map(
                 ry.append(n.y)
 
         # Outer glow
-        fig.add_trace(go.Scattermap(
+        fig.add_trace(go.Scattermapbox(
             lon=rx, lat=ry, mode="lines",
             line=dict(color="#00d4ff", width=12),
             opacity=0.18,
             hoverinfo="skip", showlegend=False,
         ))
         # Mid glow
-        fig.add_trace(go.Scattermap(
+        fig.add_trace(go.Scattermapbox(
             lon=rx, lat=ry, mode="lines",
             line=dict(color="#00d4ff", width=6),
             opacity=0.45,
             hoverinfo="skip", showlegend=False,
         ))
         # Core line
-        fig.add_trace(go.Scattermap(
+        fig.add_trace(go.Scattermapbox(
             lon=rx, lat=ry, mode="lines",
             line=dict(color="#00d4ff", width=2.5),
             opacity=1.0,
@@ -527,7 +527,7 @@ def build_map(
     for t, data in by_type.items():
         color = NODE_PALETTE.get(t, "#aaccee")
         is_route_node = any(nid in route_path for nid in data["ids"])
-        fig.add_trace(go.Scattermap(
+        fig.add_trace(go.Scattermapbox(
             lon=data["lons"], lat=data["lats"],
             mode="markers+text",
             marker=dict(
@@ -548,7 +548,7 @@ def build_map(
     # ── 4. Highlight route waypoints ───────────────────────────
     if route_path:
         rn = [graph.get_node(nid) for nid in route_path if graph.get_node(nid)]
-        fig.add_trace(go.Scattermap(
+        fig.add_trace(go.Scattermapbox(
             lon=[n.x for n in rn],
             lat=[n.y for n in rn],
             mode="markers",
@@ -561,13 +561,13 @@ def build_map(
         ))
         # Start (green) and End (red) markers
         if len(rn) >= 2:
-            fig.add_trace(go.Scattermap(
+            fig.add_trace(go.Scattermapbox(
                 lon=[rn[0].x], lat=[rn[0].y], mode="markers",
                 marker=dict(size=18, color="#00ff88", symbol="circle"),
                 hovertext=[f"<b>START</b>: {rn[0].name}"],
                 hoverinfo="text", name="Start", showlegend=False,
             ))
-            fig.add_trace(go.Scattermap(
+            fig.add_trace(go.Scattermapbox(
                 lon=[rn[-1].x], lat=[rn[-1].y], mode="markers",
                 marker=dict(size=18, color="#ff3366", symbol="circle"),
                 hovertext=[f"<b>END</b>: {rn[-1].name}"],
@@ -1026,13 +1026,32 @@ def page_infrastructure(graph):
 
             st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
 
-            # Convert matplotlib fig to Streamlit
-            import io
-            buf = io.BytesIO()
-            fig_mst.savefig(buf, format="png", dpi=130, bbox_inches="tight",
-                            facecolor="#060b14")
-            buf.seek(0)
-            st.image(buf, use_container_width=True)
+            st.plotly_chart(
+                fig_mst,
+                use_container_width=True,
+                config={"displayModeBar": False},
+            )
+
+            section_header("Complexity Comparison", "#ffcc00")
+            complexity_rows = [
+                {
+                    "Type": "Time Complexity",
+                    "Big-O": "O(E log E) / O(E log V)",
+                    "Main Reason": "Sorting all candidate edges dominates the runtime.",
+                    "Implementation Detail": "Union-Find operations use path compression and union by rank, so the edge-processing pass is O(E alpha(V)).",
+                },
+                {
+                    "Type": "Space Complexity",
+                    "Big-O": "O(V + E)",
+                    "Main Reason": "The algorithm stores both per-node Union-Find state and edge candidate structures.",
+                    "Implementation Detail": "parent/rank use O(V); weighted, seen_candidates, and chosen_roads use O(E) overall.",
+                },
+            ]
+            st.dataframe(
+                pd.DataFrame(complexity_rows),
+                use_container_width=True,
+                hide_index=True,
+            )
 
             section_header("Selected Roads", "#00ff88")
             rows = []
@@ -1074,7 +1093,7 @@ def page_infrastructure(graph):
             fig_transit.savefig(buf, format="png", dpi=130, bbox_inches="tight",
                                 facecolor="#060b14")
             buf.seek(0)
-            st.image(buf, use_container_width=True)
+            st.image(buf)
 
     with tabs[2]:
         section_header("DP Knapsack — Road Maintenance Optimizer", "#ff8800")
@@ -1099,8 +1118,12 @@ def page_infrastructure(graph):
             fig_heat.savefig(buf, format="png", dpi=130, bbox_inches="tight",
                              facecolor="#060b14")
             buf.seek(0)
-            st.image(buf, use_container_width=True)
+            st.image(buf)
 
+
+# ─────────────────────────────────────────────
+# PAGE: SYSTEM DASHBOARD
+# ─────────────────────────────────────────────
 
 # ─────────────────────────────────────────────
 # PAGE: SYSTEM DASHBOARD
@@ -1212,30 +1235,23 @@ def page_dashboard(graph):
                 fig_sig.savefig(buf, format="png", dpi=110, bbox_inches="tight",
                                 facecolor="#060b14")
                 buf.seek(0)
-                st.image(buf, use_container_width=True)
+                st.image(buf)
 
-    # ── Node population treemap ─────────────────────────────────
-    section_header("Neighbourhood Population Map", "#aa44ff")
-    pop_nodes = [n for n in graph.nodes.values() if n.population > 0]
-    if pop_nodes:
-        fig_tree = go.Figure(go.Treemap(
-            labels=[n.name for n in pop_nodes],
-            parents=["" for _ in pop_nodes],
-            values=[n.population for n in pop_nodes],
-            marker=dict(
-                colorscale=[[0,"#0a1628"],[0.5,"#0066ff"],[1,"#00d4ff"]],
-                showscale=False,
-            ),
-            textfont=dict(family="JetBrains Mono", size=11, color="#e0f0ff"),
-            hovertemplate="<b>%{label}</b><br>Population: %{value:,}<extra></extra>",
-        ))
-        fig_tree.update_layout(
-            paper_bgcolor="#060b14",
-            margin=dict(l=0, r=0, t=0, b=0),
-            height=280,
-        )
-        st.plotly_chart(fig_tree, use_container_width=True, config={"displayModeBar": False})
-
+                # --- NEW CODE TO ADD: The Egyptian Context Analysis ---
+                st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
+                with st.expander("🇪🇬 Egyptian Context Analysis (Optimal vs Suboptimal)", expanded=True):
+                    st.markdown("""
+                    **🟢 OPTIMAL SCENARIOS (Where Greedy Shines):**
+                    * **Emergency Corridors:** Immediate preemption for ambulances heading to Qasr El Aini Hospital maximizes public safety.
+                    * **Isolated Major Squares:** Works perfectly at standalone massive intersections (e.g., Ring Road exits) to instantly clear sudden localized congestion.
+                    * **Late-Night Traffic:** Acts as a smart sensor, instantly giving green to the few cars on the road instead of forcing them to wait on fixed blind timers.
+                    
+                    **🔴 SUBOPTIMAL SCENARIOS (Where Greedy Fails):**
+                    * **The 'Starvation' Problem:** Main arteries (e.g., Batal Ahmed Abdel Aziz) will mathematically always have more cars, permanently starving side streets.
+                    * **Gridlock Spillback:** Giving green to 60 cars on Ramses St might just push them into a blocked intersection 100m ahead, causing total 'box-blocking' gridlock.
+                    * **Informal Transit (Microbuses):** In Cairo, microbuses stopping right after the light to drop passengers drastically reduce actual throughput, invalidating the 'optimal' choice.
+                    """)
+                # --- END OF NEW CODE ---
 
 # ─────────────────────────────────────────────
 # MAIN

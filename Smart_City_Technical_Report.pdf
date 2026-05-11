@@ -1,0 +1,245 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+3 0 obj
+<< /Length 3657 >>
+stream
+BT /F2 22 Tf 60 690 Td (Smart City Transportation Network) Tj ET
+BT /F2 22 Tf 60 670 Td (Optimization) Tj ET
+BT /F2 16 Tf 60 638 Td (Technical Report) Tj ET
+BT /F1 10 Tf 60 606 Td (Project: Cairo Smart City Transportation Network Optimization) Tj ET
+BT /F1 10 Tf 60 586 Td (Course: CSE112 - Design and Analysis of Algorithms) Tj ET
+BT /F1 10 Tf 60 566 Td (Platform: Streamlit Web Application with Docker Support) Tj ET
+BT /F1 10 Tf 60 546 Td () Tj ET
+BT /F2 15 Tf 60 518 Td (1. Executive Summary) Tj ET
+BT /F1 10 Tf 60 496 Td (The Cairo Smart City Transportation Network Optimization project is an integrated software) Tj ET
+BT /F1 10 Tf 60 482 Td (system designed to model, analyze, and improve transportation decisions across a) Tj ET
+BT /F1 10 Tf 60 468 Td (simplified Greater Cairo road network. The project combines classical graph algorithms,) Tj ET
+BT /F1 10 Tf 60 454 Td (dynamic programming, greedy optimization, machine learning, and interactive visualization) Tj ET
+BT /F1 10 Tf 60 440 Td (into one Streamlit web application.) Tj ET
+BT /F1 10 Tf 60 420 Td (The system allows users to explore route planning, emergency response routing,) Tj ET
+BT /F1 10 Tf 60 406 Td (infrastructure expansion, public transit allocation, road maintenance planning, and) Tj ET
+BT /F1 10 Tf 60 392 Td (network health monitoring from a single interface. The project uses a graph-based) Tj ET
+BT /F1 10 Tf 60 378 Td (representation of Cairo. Nodes represent districts, neighborhoods, and facilities such as) Tj ET
+BT /F1 10 Tf 60 364 Td (hospitals, airports, universities, railway stations, and business areas. Edges represent) Tj ET
+BT /F1 10 Tf 60 350 Td (roads between these nodes and store distance, capacity, condition, and construction cost.) Tj ET
+BT /F1 10 Tf 60 330 Td (During the modification phase, the main issue we faced was that the Maintenance DP map did) Tj ET
+BT /F1 10 Tf 60 316 Td (not visually behave like the rest of the project maps. It appeared as a separate graph-) Tj ET
+BT /F1 10 Tf 60 302 Td (style visualization instead of a real interactive Cairo map. It also needed consistent) Tj ET
+BT /F1 10 Tf 60 288 Td (zoom behavior with the other maps. We fixed this by integrating the maintenance result) Tj ET
+BT /F1 10 Tf 60 274 Td (into the shared Plotly Mapbox renderer and enabling scroll zoom for all real maps.) Tj ET
+BT /F2 15 Tf 60 246 Td (2. Problem Statement And Objectives) Tj ET
+BT /F1 10 Tf 60 224 Td (Urban transportation systems involve many competing decisions. A city may need to find the) Tj ET
+BT /F1 10 Tf 60 210 Td (fastest route between two points, choose which roads to build, decide how to allocate) Tj ET
+BT /F1 10 Tf 60 196 Td (public buses, repair damaged roads within a limited budget, and improve traffic signal) Tj ET
+BT /F1 10 Tf 60 182 Td (behavior during congestion. These problems cannot all be solved using the same algorithm) Tj ET
+BT /F1 10 Tf 60 168 Td (because each has a different structure and objective.) Tj ET
+BT /F1 10 Tf 60 148 Td (- Represent Cairo as a weighted transportation graph using nodes and edges.) Tj ET
+BT /F1 10 Tf 60 134 Td (- Apply suitable algorithms to real transportation decisions.) Tj ET
+BT /F1 10 Tf 60 120 Td (- Provide an interactive Streamlit interface for non-technical users.) Tj ET
+BT /F1 10 Tf 60 106 Td (- Visualize decisions on a real Cairo basemap rather than abstract graphs only.) Tj ET
+BT /F1 10 Tf 60 92 Td (- Support reproducible execution through Docker.) Tj ET
+BT /F1 10 Tf 60 78 Td (The project focuses on road expansion, shortest-path routing, emergency routing, public) Tj ET
+BT /F1 8 Tf 60 32 Td (Smart City Transportation Network Optimization - Page 1) Tj ET
+endstream
+endobj
+4 0 obj
+<< /Type /Page /Parent 13 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 3 0 R >>
+endobj
+5 0 obj
+<< /Length 3622 >>
+stream
+BT /F1 10 Tf 60 735 Td (transit allocation, maintenance prioritization, signal optimization, and traffic) Tj ET
+BT /F1 10 Tf 60 721 Td (prediction. Each feature demonstrates a specific algorithmic technique and connects it to) Tj ET
+BT /F1 10 Tf 60 707 Td (a practical smart-city use case.) Tj ET
+BT /F2 15 Tf 60 679 Td (3. System Architecture And Data Model) Tj ET
+BT /F1 10 Tf 60 657 Td (The system is organized around a shared graph model. The main data files are nodes.csv,) Tj ET
+BT /F1 10 Tf 60 643 Td (edges.csv, Traffic_Flow_Patterns.csv, and traffic_model.pkl. The graph engine is) Tj ET
+BT /F1 10 Tf 60 629 Td (implemented in data_loader1.py and defines Node, Edge, and CairoGraph classes.) Tj ET
+BT /F1 10 Tf 60 609 Td (Each node includes an ID, name, type, population, longitude, and latitude. Each edge) Tj ET
+BT /F1 10 Tf 60 595 Td (includes source node, destination node, distance, capacity, condition, and construction) Tj ET
+BT /F1 10 Tf 60 581 Td (cost. Existing roads have zero construction cost, while potential future roads have a) Tj ET
+BT /F1 10 Tf 60 567 Td (positive construction cost.) Tj ET
+BT /F1 10 Tf 60 547 Td (The Streamlit application loads the graph once using a cached function. This improves) Tj ET
+BT /F1 10 Tf 60 533 Td (performance because the graph and machine learning predictor do not need to be rebuilt on) Tj ET
+BT /F1 10 Tf 60 519 Td (every page interaction. The same graph object is then passed into the Trip Planner,) Tj ET
+BT /F1 10 Tf 60 505 Td (Emergency Response, Infrastructure, and System Dashboard pages.) Tj ET
+BT /F1 10 Tf 60 485 Td (- app.py: Streamlit user interface and shared Plotly map renderer.) Tj ET
+BT /F1 10 Tf 60 471 Td (- data_loader1.py: graph engine for nodes, edges, and adjacency lists.) Tj ET
+BT /F1 10 Tf 60 457 Td (- dijkstra.py and astar.py: routing modules.) Tj ET
+BT /F1 10 Tf 60 443 Td (- kruskal_mst.py: infrastructure expansion planning.) Tj ET
+BT /F1 10 Tf 60 429 Td (- dp_maintenance.py: road repair optimization using DP Knapsack.) Tj ET
+BT /F1 10 Tf 60 415 Td (- public_transit_scheduler.py: bus allocation using Dynamic Programming.) Tj ET
+BT /F1 10 Tf 60 401 Td (- greedy.py: traffic signal optimization.) Tj ET
+BT /F2 15 Tf 60 379 Td (4. Algorithms Used) Tj ET
+BT /F2 12 Tf 60 353 Td (4.1 Dijkstra's Algorithm) Tj ET
+BT /F1 10 Tf 60 335 Td (Dijkstra's algorithm is used to find the shortest or fastest path between two nodes. It is) Tj ET
+BT /F1 10 Tf 60 321 Td (suitable because all road weights are non-negative. In this project, edge weights may) Tj ET
+BT /F1 10 Tf 60 307 Td (represent distance or predicted travel time depending on whether the traffic predictor is) Tj ET
+BT /F1 10 Tf 60 293 Td (active.) Tj ET
+BT /F2 12 Tf 60 269 Td (4.2 A* Search) Tj ET
+BT /F1 10 Tf 60 251 Td (A* Search is used for emergency routing. It improves search efficiency by using a) Tj ET
+BT /F1 10 Tf 60 237 Td (heuristic based on geographic distance to the destination. This helps emergency vehicles) Tj ET
+BT /F1 10 Tf 60 223 Td (find routes while exploring fewer nodes than Dijkstra in many cases.) Tj ET
+BT /F2 12 Tf 60 199 Td (4.3 Kruskal's Minimum Spanning Tree) Tj ET
+BT /F1 10 Tf 60 181 Td (Kruskal's algorithm is used for road expansion. Existing roads are treated as already) Tj ET
+BT /F1 10 Tf 60 167 Td (connected, and potential roads are sorted by construction cost. A Union-Find structure) Tj ET
+BT /F1 10 Tf 60 153 Td (prevents cycles. This helps select cost-effective new roads that improve city) Tj ET
+BT /F1 10 Tf 60 139 Td (connectivity.) Tj ET
+BT /F1 8 Tf 60 32 Td (Smart City Transportation Network Optimization - Page 2) Tj ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 13 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 4061 >>
+stream
+BT /F2 12 Tf 60 731 Td (4.4 Dynamic Programming For Bus Allocation) Tj ET
+BT /F1 10 Tf 60 713 Td (The public transit scheduler uses Dynamic Programming to allocate a limited bus fleet) Tj ET
+BT /F1 10 Tf 60 699 Td (across routes. This is better than a simple greedy method because it evaluates many) Tj ET
+BT /F1 10 Tf 60 685 Td (allocation combinations and avoids assigning too many buses to a single route.) Tj ET
+BT /F2 12 Tf 60 661 Td (4.5 DP Knapsack For Road Maintenance) Tj ET
+BT /F1 10 Tf 60 643 Td (The maintenance module converts each existing road into a repair candidate with repair) Tj ET
+BT /F1 10 Tf 60 629 Td (cost and repair value. The problem becomes a 0/1 Knapsack problem: choose a subset of) Tj ET
+BT /F1 10 Tf 60 615 Td (roads to repair without exceeding the budget while maximizing total score gain.) Tj ET
+BT /F2 12 Tf 60 591 Td (4.6 Greedy Signal Optimization) Tj ET
+BT /F1 10 Tf 60 573 Td (The greedy signal optimizer models local traffic-light decisions by choosing the action) Tj ET
+BT /F1 10 Tf 60 559 Td (with the best immediate benefit. It is fast and useful for real-time demonstrations,) Tj ET
+BT /F1 10 Tf 60 545 Td (although it may not always produce a city-wide optimal result.) Tj ET
+BT /F2 15 Tf 60 517 Td (5. Main Problem Faced) Tj ET
+BT /F1 10 Tf 60 495 Td (The main problem appeared in the Infrastructure page, specifically in the Maintenance DP) Tj ET
+BT /F1 10 Tf 60 481 Td (tab. The maintenance optimizer itself worked correctly. For example, with a budget of) Tj ET
+BT /F1 10 Tf 60 467 Td (2,000 cost-units, the optimizer selected 12 roads, used 1,973 cost-units, and produced a) Tj ET
+BT /F1 10 Tf 60 453 Td (score gain of +156. However, the visualization did not match the rest of the project.) Tj ET
+BT /F1 10 Tf 60 433 Td (The rest of the application used real interactive Cairo maps through Plotly Mapbox. Trip) Tj ET
+BT /F1 10 Tf 60 419 Td (planning, emergency response, and infrastructure expansion were displayed geographically) Tj ET
+BT /F1 10 Tf 60 405 Td (using longitude and latitude. In contrast, the maintenance DP visualization appeared more) Tj ET
+BT /F1 10 Tf 60 391 Td (like an abstract graph or separate heatmap.) Tj ET
+BT /F1 10 Tf 60 371 Td (This caused an inconsistent user experience. Users could see real map behavior on other) Tj ET
+BT /F1 10 Tf 60 357 Td (pages but not in the maintenance section. It also made the maintenance result harder to) Tj ET
+BT /F1 10 Tf 60 343 Td (understand because road repair decisions are spatial and should be shown on the actual) Tj ET
+BT /F1 10 Tf 60 329 Td (city map.) Tj ET
+BT /F1 10 Tf 60 309 Td (A second issue was zoom behavior. After the maintenance map was converted into a real map,) Tj ET
+BT /F1 10 Tf 60 295 Td (the user also needed to zoom in and out of it like the other maps. Then the requirement) Tj ET
+BT /F1 10 Tf 60 281 Td (expanded: zoom should be enabled consistently across all maps, not only the maintenance) Tj ET
+BT /F1 10 Tf 60 267 Td (map.) Tj ET
+BT /F2 15 Tf 60 239 Td (6. How We Fixed It) Tj ET
+BT /F2 12 Tf 60 213 Td (6.1 Reusing The Shared Map Renderer) Tj ET
+BT /F1 10 Tf 60 195 Td (The fix was implemented in app.py. Instead of displaying Maintenance DP with a separate) Tj ET
+BT /F1 10 Tf 60 181 Td (visualization, the shared build_map\(\) function was extended with an optional) Tj ET
+BT /F1 10 Tf 60 167 Td (maintenance_result parameter. When this parameter is provided, the map enters maintenance) Tj ET
+BT /F1 10 Tf 60 153 Td (mode while still using the same Cairo basemap, node rendering, layout, and Plotly behavior) Tj ET
+BT /F1 10 Tf 60 139 Td (as the rest of the app.) Tj ET
+BT /F1 10 Tf 60 119 Td (Roads are colored by condition: poor roads are shown in red or pink, fair roads in yellow,) Tj ET
+BT /F1 10 Tf 60 105 Td (good roads in green, and DP-selected roads in cyan. This made the maintenance result) Tj ET
+BT /F1 10 Tf 60 91 Td (visually consistent with Trip Planner, Emergency Response, and MST Infrastructure maps.) Tj ET
+BT /F1 8 Tf 60 32 Td (Smart City Transportation Network Optimization - Page 3) Tj ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 13 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Length 3722 >>
+stream
+BT /F2 12 Tf 60 731 Td (6.2 Highlighting Selected Repair Roads) Tj ET
+BT /F1 10 Tf 60 713 Td (Selected repair roads are identified from the DP result by storing each selected road as a) Tj ET
+BT /F1 10 Tf 60 699 Td (sorted pair of endpoint IDs. If an edge appears in this selected set, it is drawn with a) Tj ET
+BT /F1 10 Tf 60 685 Td (thicker cyan line and a glow layer. This makes the algorithm's decision easy to see on the) Tj ET
+BT /F1 10 Tf 60 671 Td (dark basemap.) Tj ET
+BT /F1 10 Tf 60 651 Td (The hover text was also improved. Users can hover over a road to see condition, distance,) Tj ET
+BT /F1 10 Tf 60 637 Td (repair cost, score gain, and whether it was selected for repair.) Tj ET
+BT /F2 12 Tf 60 613 Td (6.3 Enabling Zoom On All Maps) Tj ET
+BT /F1 10 Tf 60 595 Td (To make zoom behavior consistent, one shared Plotly map configuration was added:) Tj ET
+BT /F1 10 Tf 60 581 Td (PLOTLY_MAP_CONFIG = {"displayModeBar": False, "scrollZoom": True}. This configuration was) Tj ET
+BT /F1 10 Tf 60 567 Td (applied to the Trip Planner map, Emergency Response map, Road Expansion MST map, and) Tj ET
+BT /F1 10 Tf 60 553 Td (Maintenance DP map. Non-map bar charts were left unchanged.) Tj ET
+BT /F1 10 Tf 60 533 Td (This solved the usability issue while keeping the clean hidden-toolbar interface used by) Tj ET
+BT /F1 10 Tf 60 519 Td (the project.) Tj ET
+BT /F2 15 Tf 60 491 Td (7. Dockerization And Deployment Readiness) Tj ET
+BT /F1 10 Tf 60 469 Td (The project is Docker-ready. The repository includes a Dockerfile, requirements.txt, and) Tj ET
+BT /F1 10 Tf 60 455 Td (.dockerignore. The Dockerfile uses python:3.11-slim, installs required system packages,) Tj ET
+BT /F1 10 Tf 60 441 Td (installs Python dependencies, copies the project files, configures Streamlit, exposes port) Tj ET
+BT /F1 10 Tf 60 427 Td (8501, and runs the application.) Tj ET
+BT /F1 10 Tf 60 407 Td (The important startup command is: streamlit run app.py --server.port=${PORT:-8501}) Tj ET
+BT /F1 10 Tf 60 393 Td (--server.address=0.0.0.0. This allows the app to run locally on port 8501 while also) Tj ET
+BT /F1 10 Tf 60 379 Td (supporting cloud platforms that provide a PORT environment variable.) Tj ET
+BT /F1 10 Tf 60 359 Td (To build and run the Docker image after the modifications, use: docker build -t smart-) Tj ET
+BT /F1 10 Tf 60 345 Td (city-transportation . Then run: docker run --rm -p 8501:8501 smart-city-transportation.) Tj ET
+BT /F1 10 Tf 60 331 Td (The app can then be opened at http://localhost:8501.) Tj ET
+BT /F1 10 Tf 60 311 Td (The Dockerized app includes the updated app.py with the real maintenance map and zoom) Tj ET
+BT /F1 10 Tf 60 297 Td (enabled on all maps.) Tj ET
+BT /F2 15 Tf 60 269 Td (8. Testing And Verification) Tj ET
+BT /F1 10 Tf 60 247 Td (The modified code was verified using Python compilation checks: python -m py_compile) Tj ET
+BT /F1 10 Tf 60 233 Td (app.py dp_maintenance.py. The Streamlit app was also run locally and checked through the) Tj ET
+BT /F1 10 Tf 60 219 Td (browser.) Tj ET
+BT /F1 10 Tf 60 199 Td (- The app launched successfully on localhost.) Tj ET
+BT /F1 10 Tf 60 185 Td (- The Infrastructure page opened correctly.) Tj ET
+BT /F1 10 Tf 60 171 Td (- The Maintenance DP optimizer ran successfully.) Tj ET
+BT /F1 10 Tf 60 157 Td (- Maintenance KPI cards updated correctly.) Tj ET
+BT /F1 10 Tf 60 143 Td (- The maintenance result appeared on a real Cairo basemap.) Tj ET
+BT /F1 10 Tf 60 129 Td (- Selected repair roads were highlighted in cyan.) Tj ET
+BT /F1 10 Tf 60 115 Td (- Zoom was enabled on all map views.) Tj ET
+BT /F1 10 Tf 60 101 Td (- Non-map charts were not changed unnecessarily.) Tj ET
+BT /F1 8 Tf 60 32 Td (Smart City Transportation Network Optimization - Page 4) Tj ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 13 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 9 0 R >>
+endobj
+11 0 obj
+<< /Length 1469 >>
+stream
+BT /F2 15 Tf 60 727 Td (9. Conclusion) Tj ET
+BT /F1 10 Tf 60 705 Td (The Cairo Smart City Transportation Network Optimization project successfully integrates) Tj ET
+BT /F1 10 Tf 60 691 Td (multiple algorithmic techniques into one practical transportation dashboard. Dijkstra and) Tj ET
+BT /F1 10 Tf 60 677 Td (A* solve routing problems, Kruskal's algorithm supports infrastructure planning, Dynamic) Tj ET
+BT /F1 10 Tf 60 663 Td (Programming solves bus allocation and maintenance planning, a greedy algorithm models) Tj ET
+BT /F1 10 Tf 60 649 Td (signal control, and machine learning supports traffic prediction.) Tj ET
+BT /F1 10 Tf 60 629 Td (The most important improvement made during this modification was fixing the Maintenance DP) Tj ET
+BT /F1 10 Tf 60 615 Td (visualization. The algorithm was already correct, but the result needed to be shown in a) Tj ET
+BT /F1 10 Tf 60 601 Td (way that matched the rest of the system. By integrating maintenance into the shared Plotly) Tj ET
+BT /F1 10 Tf 60 587 Td (map renderer and enabling zoom across all maps, the project became more consistent,) Tj ET
+BT /F1 10 Tf 60 573 Td (professional, and easier to use.) Tj ET
+BT /F1 10 Tf 60 553 Td (The final version is locally saved, Docker-ready, and improved with a real interactive) Tj ET
+BT /F1 10 Tf 60 539 Td (maintenance map and consistent map zoom behavior across the application.) Tj ET
+BT /F1 8 Tf 60 32 Td (Smart City Transportation Network Optimization - Page 5) Tj ET
+endstream
+endobj
+12 0 obj
+<< /Type /Page /Parent 13 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 11 0 R >>
+endobj
+13 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R 10 0 R 12 0 R] /Count 5 >>
+endobj
+14 0 obj
+<< /Type /Catalog /Pages 13 0 R >>
+endobj
+xref
+0 15
+0000000000 65535 f 
+0000000015 00000 n 
+0000000085 00000 n 
+0000000160 00000 n 
+0000003869 00000 n 
+0000004006 00000 n 
+0000007680 00000 n 
+0000007817 00000 n 
+0000011930 00000 n 
+0000012067 00000 n 
+0000015841 00000 n 
+0000015979 00000 n 
+0000017501 00000 n 
+0000017640 00000 n 
+0000017724 00000 n 
+trailer
+<< /Size 15 /Root 14 0 R >>
+startxref
+17775
+%%EOF

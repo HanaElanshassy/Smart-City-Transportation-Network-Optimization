@@ -369,6 +369,8 @@ CONGESTION_PALETTE = {
     "chaos":    "#ff0080",   # magenta — chaos-triggered edge
 }
 
+PLOTLY_MAP_CONFIG = {"displayModeBar": False, "scrollZoom": True}
+
 NODE_PALETTE = {
     "Medical":    "#ff3366",
     "Government": "#aa44ff",
@@ -404,6 +406,7 @@ def build_map(
     route_path:    list = None,
     chaos_edges:   dict = None,
     show_potential:bool = False,
+    maintenance_result = None,
 ) -> go.Figure:
     """
     Build the Plotly interactive Cairo map.
@@ -415,18 +418,84 @@ def build_map(
     chaos_edges = chaos_edges or {}
     route_path  = route_path  or []
     route_set   = set(zip(route_path, route_path[1:])) if len(route_path) > 1 else set()
+    maintenance_mode = maintenance_result is not None
+    selected_maintenance = set()
+    maintenance_roads = {}
+    if maintenance_mode:
+        for road in maintenance_result.all_edges:
+            maintenance_roads[tuple(sorted([road["from_id"], road["to_id"]]))] = road
+        for road in maintenance_result.selected_roads:
+            selected_maintenance.add(tuple(sorted([road["from_id"], road["to_id"]])))
 
     fig = go.Figure()
+
+    def _condition_color(condition: float) -> str:
+        if condition <= 4:
+            return "#ff3366"
+        if condition <= 7:
+            return "#ffcc00"
+        return "#00cc66"
+
+    def _condition_label(condition: float) -> str:
+        if condition <= 4:
+            return "Poor condition"
+        if condition <= 7:
+            return "Fair condition"
+        return "Good condition"
 
     # ── 1. Draw edges ──────────────────────────────────────────
     edges = graph.get_existing_edges()
     if show_potential:
         edges = edges + graph.get_potential_edges()
 
+    maintenance_selected_edges = []
+    legend_seen = set()
+
     for edge in edges:
         n_from = graph.get_node(edge.from_id)
         n_to   = graph.get_node(edge.to_id)
         if not n_from or not n_to:
+            continue
+
+        if maintenance_mode:
+            maintenance_key = tuple(sorted([edge.from_id, edge.to_id]))
+            maintenance_road = maintenance_roads.get(maintenance_key)
+            is_selected_maintenance = maintenance_key in selected_maintenance
+            condition_label = _condition_label(edge.condition)
+            legend_name = (
+                f"Selected for Repair - DP ({len(selected_maintenance)} roads)"
+                if is_selected_maintenance else condition_label
+            )
+            legend_key = "maintenance-selected" if is_selected_maintenance else condition_label
+            show_legend = legend_key not in legend_seen
+            legend_seen.add(legend_key)
+
+            fig.add_trace(go.Scattermapbox(
+                lon=[n_from.x, n_to.x, None],
+                lat=[n_from.y, n_to.y, None],
+                mode="lines",
+                line=dict(
+                    color="#00d4ff" if is_selected_maintenance else _condition_color(edge.condition),
+                    width=5.0 if is_selected_maintenance else 2.5,
+                ),
+                opacity=1.0 if is_selected_maintenance else 0.74,
+                hoverinfo="text",
+                hovertext=(
+                    f"{n_from.name} → {n_to.name}<br>"
+                    f"Condition: {edge.condition:.0f}/10<br>"
+                    f"Distance: {edge.distance} km"
+                    + (
+                        f"<br>Repair Cost: {maintenance_road['repair_cost']:,} units"
+                        f"<br>Score Gain: +{maintenance_road['repair_value']}"
+                        if maintenance_road else ""
+                    )
+                    + ("<br><b>Selected for repair</b>" if is_selected_maintenance else "")
+                ),
+                name=legend_name,
+                showlegend=show_legend,
+            ))
+            if is_selected_maintenance:
+                maintenance_selected_edges.append((n_from, n_to))
             continue
 
         chaos_key  = f"{edge.from_id}->{edge.to_id}"
@@ -470,6 +539,19 @@ def build_map(
             hoverinfo="text", hovertext=hover,
             showlegend=False,
         ))
+
+    if maintenance_mode and maintenance_selected_edges:
+        for i, (n_from, n_to) in enumerate(maintenance_selected_edges):
+            fig.add_trace(go.Scattermapbox(
+                lon=[n_from.x, n_to.x, None],
+                lat=[n_from.y, n_to.y, None],
+                mode="lines",
+                line=dict(color="#00d4ff", width=10),
+                opacity=0.22,
+                hoverinfo="skip",
+                name="Repair route glow",
+                showlegend=False,
+            ))
 
     # ── 2. Draw route glow (thick + thin layered) ──────────────
     if len(route_path) > 1:
@@ -859,7 +941,7 @@ def page_trip_planner(graph, src_id, tgt_id, time_sel, algo_sel, find_clicked):
             chaos_edges=st.session_state.chaos_edges,
             show_potential=st.session_state.show_potential,
         )
-        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_MAP_CONFIG)
 
     with detail_col:
         section_header("Route Details", "#00d4ff")
@@ -968,7 +1050,7 @@ def page_emergency(graph):
 
         with map_c:
             fig = build_map(graph, time_of_day=time_sel, route_path=a_res.path)
-            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(fig, use_container_width=True, config=PLOTLY_MAP_CONFIG)
 
         with bar_c:
             section_header("Algorithm Race", "#ff3366")
@@ -1029,7 +1111,7 @@ def page_infrastructure(graph):
             st.plotly_chart(
                 fig_mst,
                 use_container_width=True,
-                config={"displayModeBar": False},
+                config=PLOTLY_MAP_CONFIG,
             )
 
             section_header("Complexity Comparison", "#ffcc00")
@@ -1099,10 +1181,9 @@ def page_infrastructure(graph):
         section_header("DP Knapsack — Road Maintenance Optimizer", "#ff8800")
         budget = st.slider("Repair Budget (cost-units)", 500, 5000, 2000, 100, key="maint_budget")
         if st.button("▶  Run Maintenance Optimizer", key="maint_run"):
-            from dp_maintenance import load_edges, load_nodes, solve_maintenance, plot_condition_heatmap
+            from dp_maintenance import load_edges, solve_maintenance
             with st.spinner("Solving knapsack DP..."):
                 edges = load_edges(os.path.join(BASE_DIR, "edges.csv"))
-                nodes = load_nodes(os.path.join(BASE_DIR, "nodes.csv"))
                 result = solve_maintenance(edges, budget)
 
             k1, k2, k3 = st.columns(3)
@@ -1112,11 +1193,24 @@ def page_infrastructure(graph):
 
             st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
 
-            fig_heat = plot_condition_heatmap(edges, nodes, result)
+            fig_heat = build_map(graph, maintenance_result=result)
+            fig_heat.update_layout(
+                title=dict(
+                    text=(
+                        "Cairo Smart City - Infrastructure Maintenance Map"
+                        f" | Budget: {result.budget:,} | Used: {result.total_cost:,}"
+                        f" | Score Gain: +{result.total_value}"
+                    ),
+                    font=dict(color="#e8f4ff", size=15),
+                    x=0.02,
+                    y=0.98,
+                ),
+                margin=dict(l=0, r=0, t=42, b=0),
+            )
             st.plotly_chart(
                 fig_heat,
                 use_container_width=True,
-                config={"displayModeBar": False},
+                config=PLOTLY_MAP_CONFIG,
             )
 
 

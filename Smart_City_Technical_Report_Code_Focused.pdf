@@ -1,0 +1,246 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+3 0 obj
+<< /Length 3549 >>
+stream
+BT /F2 21 Tf 58 701.00 Td (Smart City Transportation Network) Tj ET
+BT /F2 21 Tf 58 681.50 Td (Optimization) Tj ET
+BT /F2 15 Tf 58 654.00 Td (Code-Focused Technical Report) Tj ET
+BT /F1 9.6 Tf 58 624.50 Td (Stack: Python, Streamlit, Plotly Mapbox, pandas, scikit-learn, Docker) Tj ET
+BT /F2 14 Tf 58 600.00 Td (1. Technical Overview) Tj ET
+BT /F1 9.6 Tf 58 579.50 Td (This project is a Python smart-city transportation system that combines algorithms with an) Tj ET
+BT /F1 9.6 Tf 58 566.00 Td (interactive Streamlit dashboard. Cairo is modeled as a weighted graph where nodes are) Tj ET
+BT /F1 9.6 Tf 58 552.50 Td (locations and edges are roads. The system applies graph algorithms, dynamic programming,) Tj ET
+BT /F1 9.6 Tf 58 539.00 Td (greedy optimization, and machine learning to transportation planning problems.) Tj ET
+BT /F1 9.6 Tf 58 520.50 Td (The application is integrated rather than a collection of separate scripts. The graph is) Tj ET
+BT /F1 9.6 Tf 58 507.00 Td (loaded once, shared across modules, visualized through reusable Plotly map logic, and exposed) Tj ET
+BT /F1 9.6 Tf 58 493.50 Td (through a multi-page Streamlit UI.) Tj ET
+BT /F1 9.4 Tf 58 475.00 Td (- UI layer: app.py handles navigation, KPI cards, tabs, maps, and user controls.) Tj ET
+BT /F1 9.4 Tf 58 460.50 Td (- Graph layer: data_loader1.py loads nodes.csv and edges.csv into CairoGraph.) Tj ET
+BT /F1 9.4 Tf 58 446.00 Td (- Algorithm layer: dijkstra.py, astar.py, kruskal_mst.py, dp_maintenance.py,) Tj ET
+BT /F1 9.4 Tf 58 432.50 Td (  public_transit_scheduler.py, and greedy.py.) Tj ET
+BT /F1 9.4 Tf 58 418.00 Td (- Prediction layer: traffic_ml_model.py trains and serves Random Forest traffic predictions.) Tj ET
+BT /F1 9.4 Tf 58 403.50 Td (- Deployment layer: Dockerfile, requirements.txt, and .dockerignore package the project.) Tj ET
+BT /F2 14 Tf 58 383.00 Td (2. Code Architecture) Tj ET
+BT /F2 11.2 Tf 58 360.50 Td (2.1 Graph Model) Tj ET
+BT /F1 9.6 Tf 58 343.00 Td (CairoGraph stores nodes, edges, and adjacency_list. nodes is a dictionary indexed by node ID,) Tj ET
+BT /F1 9.6 Tf 58 329.50 Td (edges is a list of Edge objects, and adjacency_list maps each node to outgoing road edges.) Tj ET
+BT /F1 8.6 Tf 72 311.00 Td (graph.nodes          # { node_id: Node }) Tj ET
+BT /F1 8.6 Tf 72 297.50 Td (graph.edges          # all Edge objects) Tj ET
+BT /F1 8.6 Tf 72 284.00 Td (graph.adjacency_list # { node_id: [Edge, ...] }) Tj ET
+BT /F1 9.6 Tf 58 265.50 Td (The graph loader creates reverse edges for undirected road traversal. Without reverse) Tj ET
+BT /F1 9.6 Tf 58 252.00 Td (adjacency entries, Dijkstra or A* could fail to find routes that should exist in the physical) Tj ET
+BT /F1 9.6 Tf 58 238.50 Td (road network.) Tj ET
+BT /F2 11.2 Tf 58 218.00 Td (2.2 Streamlit State And Caching) Tj ET
+BT /F1 9.6 Tf 58 200.50 Td (The app uses st.session_state for route results, active page, chaos simulation edges, selected) Tj ET
+BT /F1 9.6 Tf 58 187.00 Td (time of day, and UI choices. The graph is loaded with st.cache_resource so it is not rebuilt) Tj ET
+BT /F1 9.6 Tf 58 173.50 Td (on every widget interaction.) Tj ET
+BT /F1 8.6 Tf 72 155.00 Td (@st.cache_resource\(show_spinner=False\)) Tj ET
+BT /F1 8.6 Tf 72 141.50 Td (def load_graph\(\):) Tj ET
+BT /F1 8.6 Tf 72 128.00 Td (    graph = CairoGraph\(\)) Tj ET
+BT /F1 8.6 Tf 72 114.50 Td (    graph.load_data\(nodes_path, edges_path\)) Tj ET
+BT /F1 8.6 Tf 72 101.00 Td (    return graph) Tj ET
+BT /F1 8 Tf 58 30 Td (Smart City Transportation Network Optimization - Code-Focused Technical Report - Page 1) Tj ET
+endstream
+endobj
+4 0 obj
+<< /Type /Page /Parent 13 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 3 0 R >>
+endobj
+5 0 obj
+<< /Length 3788 >>
+stream
+BT /F2 14 Tf 58 729.00 Td (3. Algorithm Implementation Details) Tj ET
+BT /F2 11.2 Tf 58 706.50 Td (3.1 Dijkstra Routing) Tj ET
+BT /F1 9.6 Tf 58 689.00 Td (Dijkstra finds the shortest or fastest path between two nodes using non-negative edge weights.) Tj ET
+BT /F1 9.6 Tf 58 675.50 Td (The weight can come from static distance or from graph.get_weight\(\) when the traffic predictor) Tj ET
+BT /F1 9.6 Tf 58 662.00 Td (is active. With a priority queue, complexity is O\(\(V + E\) log V\).) Tj ET
+BT /F2 11.2 Tf 58 641.50 Td (3.2 A* Emergency Routing) Tj ET
+BT /F1 9.6 Tf 58 624.00 Td (A* uses f\(n\) = g\(n\) + h\(n\), where h\(n\) is a geographic distance heuristic. This helps) Tj ET
+BT /F1 9.6 Tf 58 610.50 Td (emergency routing because the search is guided toward the hospital and usually explores fewer) Tj ET
+BT /F1 9.6 Tf 58 597.00 Td (nodes than Dijkstra.) Tj ET
+BT /F2 11.2 Tf 58 576.50 Td (3.3 Kruskal MST Road Expansion) Tj ET
+BT /F1 9.6 Tf 58 559.00 Td (Kruskal's algorithm uses Union-Find with path compression and union by rank. Existing roads) Tj ET
+BT /F1 9.6 Tf 58 545.50 Td (are connected first, then potential roads are sorted by construction cost. The dominant cost) Tj ET
+BT /F1 9.6 Tf 58 532.00 Td (is sorting, so complexity is O\(E log E\).) Tj ET
+BT /F1 8.6 Tf 72 513.50 Td (if uf.union\(edge.from_id, edge.to_id\):) Tj ET
+BT /F1 8.6 Tf 72 500.00 Td (    chosen_roads.append\(edge\)) Tj ET
+BT /F1 8.6 Tf 72 486.50 Td (    total_cost += actual_cost) Tj ET
+BT /F2 11.2 Tf 58 466.00 Td (3.4 Maintenance DP Knapsack) Tj ET
+BT /F1 9.6 Tf 58 448.50 Td (Road maintenance is a 0/1 Knapsack problem. Each candidate road has repair_cost and) Tj ET
+BT /F1 9.6 Tf 58 435.00 Td (repair_value. The DP table has dimensions \(n + 1\) by \(budget + 1\). Backtracking through the) Tj ET
+BT /F1 9.6 Tf 58 421.50 Td (table returns the exact roads selected for repair.) Tj ET
+BT /F1 8.6 Tf 72 403.00 Td (dp[i][w] = dp[i - 1][w]) Tj ET
+BT /F1 8.6 Tf 72 389.50 Td (if w >= cost:) Tj ET
+BT /F1 8.6 Tf 72 376.00 Td (    dp[i][w] = max\(dp[i][w], dp[i - 1][w - cost] + value\)) Tj ET
+BT /F2 11.2 Tf 58 355.50 Td (3.5 Bus Allocation DP) Tj ET
+BT /F1 9.6 Tf 58 338.00 Td (The bus scheduler uses dynamic programming to distribute a limited fleet across routes. This) Tj ET
+BT /F1 9.6 Tf 58 324.50 Td (avoids the weakness of a greedy approach that might assign too many buses to the single) Tj ET
+BT /F1 9.6 Tf 58 311.00 Td (highest-demand route.) Tj ET
+BT /F2 11.2 Tf 58 290.50 Td (3.6 Greedy Signal Control) Tj ET
+BT /F1 9.6 Tf 58 273.00 Td (The signal controller uses a greedy decision rule for fast local optimization. It is useful) Tj ET
+BT /F1 9.6 Tf 58 259.50 Td (for real-time simulation, but it can be suboptimal if downstream congestion is ignored.) Tj ET
+BT /F2 14 Tf 58 235.00 Td (4. Code-Level Problems Faced And Fixes) Tj ET
+BT /F2 11.2 Tf 58 212.50 Td (4.1 Maintenance DP Used A Different Visualization Path) Tj ET
+BT /F1 9.6 Tf 58 195.00 Td (The Maintenance DP algorithm produced correct values, but its visualization did not match the) Tj ET
+BT /F1 9.6 Tf 58 181.50 Td (rest of the app. It was displayed separately from the shared Plotly Mapbox renderer, causing) Tj ET
+BT /F1 9.6 Tf 58 168.00 Td (inconsistent styling and interaction.) Tj ET
+BT /F1 9.6 Tf 58 149.50 Td (Fix: build_map\(\) in app.py was extended with a maintenance_result parameter so maintenance can) Tj ET
+BT /F1 9.6 Tf 58 136.00 Td (reuse the same Cairo basemap, node rendering, layout, and Streamlit map behavior.) Tj ET
+BT /F1 8.6 Tf 72 117.50 Td (def build_map\(..., maintenance_result=None\):) Tj ET
+BT /F1 8.6 Tf 72 104.00 Td (    maintenance_mode = maintenance_result is not None) Tj ET
+BT /F1 8 Tf 58 30 Td (Smart City Transportation Network Optimization - Code-Focused Technical Report - Page 2) Tj ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 13 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 5 0 R >>
+endobj
+7 0 obj
+<< /Length 3814 >>
+stream
+BT /F2 11.2 Tf 58 733.00 Td (4.2 Selected Repair Roads Were Hard To Identify) Tj ET
+BT /F1 9.6 Tf 58 715.50 Td (After moving maintenance to a real map, selected roads still needed clear emphasis. If all) Tj ET
+BT /F1 9.6 Tf 58 702.00 Td (roads were only condition-colored, the DP decision was not obvious.) Tj ET
+BT /F1 9.6 Tf 58 683.50 Td (Fix: selected roads are stored as sorted endpoint tuples and rendered in cyan with thicker) Tj ET
+BT /F1 9.6 Tf 58 670.00 Td (lines and a glow layer.) Tj ET
+BT /F1 8.6 Tf 72 651.50 Td (selected_maintenance.add\(tuple\(sorted\([road['from_id'], road['to_id']]\)\)\)) Tj ET
+BT /F2 11.2 Tf 58 631.00 Td (4.3 Zoom Was Not Consistent Across Maps) Tj ET
+BT /F1 9.6 Tf 58 613.50 Td (Plotly maps support zoom, but scroll zoom must be explicitly enabled when the toolbar is) Tj ET
+BT /F1 9.6 Tf 58 600.00 Td (hidden. Initially, only the maintenance map had it enabled.) Tj ET
+BT /F1 9.6 Tf 58 581.50 Td (Fix: a shared configuration was created and applied to Trip Planner, Emergency Response, MST,) Tj ET
+BT /F1 9.6 Tf 58 568.00 Td (and Maintenance maps.) Tj ET
+BT /F1 8.6 Tf 72 549.50 Td (PLOTLY_MAP_CONFIG = {'displayModeBar': False, 'scrollZoom': True}) Tj ET
+BT /F2 11.2 Tf 58 529.00 Td (4.4 Directed vs Undirected Road Access) Tj ET
+BT /F1 9.6 Tf 58 511.50 Td (edges.csv lists each road once, but most city roads should be traversable both ways. If only) Tj ET
+BT /F1 9.6 Tf 58 498.00 Td (forward edges are stored, routing can fail depending on direction.) Tj ET
+BT /F1 9.6 Tf 58 479.50 Td (Fix: the loader stores both forward and reverse adjacency entries. Unique-edge helpers prevent) Tj ET
+BT /F1 9.6 Tf 58 466.00 Td (duplicate display on maps.) Tj ET
+BT /F2 11.2 Tf 58 445.50 Td (4.5 Existing Roads Mixed With Potential Roads) Tj ET
+BT /F1 9.6 Tf 58 428.00 Td (The same edge file contains built roads and future candidate roads. Routing must not) Tj ET
+BT /F1 9.6 Tf 58 414.50 Td (accidentally use unbuilt roads, while MST must evaluate them.) Tj ET
+BT /F1 9.6 Tf 58 396.00 Td (Fix: Edge exposes is_existing and is_potential based on Cost. Routing defaults to existing) Tj ET
+BT /F1 9.6 Tf 58 382.50 Td (roads, while MST uses potential roads intentionally.) Tj ET
+BT /F1 8.6 Tf 72 364.00 Td (edge.is_existing  # cost == 0) Tj ET
+BT /F1 8.6 Tf 72 350.50 Td (edge.is_potential # cost > 0) Tj ET
+BT /F2 11.2 Tf 58 330.00 Td (4.6 DP Budget Required Integer Indexes) Tj ET
+BT /F1 9.6 Tf 58 312.50 Td (The maintenance DP table indexes budgets from 0 to W. Floating repair costs would break safe) Tj ET
+BT /F1 9.6 Tf 58 299.00 Td (indexing.) Tj ET
+BT /F1 9.6 Tf 58 280.50 Td (Fix: repair_cost is converted to int after calculation, making the DP table deterministic and) Tj ET
+BT /F1 9.6 Tf 58 267.00 Td (index-safe.) Tj ET
+BT /F2 11.2 Tf 58 246.50 Td (4.7 Streamlit Reruns Could Reset UI Output) Tj ET
+BT /F1 9.6 Tf 58 229.00 Td (Streamlit reruns the script after widget interactions. Without session state, route results) Tj ET
+BT /F1 9.6 Tf 58 215.50 Td (and selections could disappear.) Tj ET
+BT /F1 9.6 Tf 58 197.00 Td (Fix: session state defaults are initialized for route_result, active_page, selected algorithm,) Tj ET
+BT /F1 9.6 Tf 58 183.50 Td (selected time, potential-road toggle, and chaos edges.) Tj ET
+BT /F2 11.2 Tf 58 163.00 Td (4.8 Docker Slim Image Needed System Libraries) Tj ET
+BT /F1 9.6 Tf 58 145.50 Td (A slim Python Docker image can miss Linux libraries needed by matplotlib, scikit-learn, or) Tj ET
+BT /F1 9.6 Tf 58 132.00 Td (graphical dependencies.) Tj ET
+BT /F1 9.6 Tf 58 113.50 Td (Fix: the Dockerfile installs build-essential, libglib2.0-0, and libgl1 before installing) Tj ET
+BT /F1 9.6 Tf 58 100.00 Td (Python dependencies.) Tj ET
+BT /F1 8 Tf 58 30 Td (Smart City Transportation Network Optimization - Code-Focused Technical Report - Page 3) Tj ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 13 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 7 0 R >>
+endobj
+9 0 obj
+<< /Length 3507 >>
+stream
+BT /F2 11.2 Tf 58 733.00 Td (4.9 Cloud Deployment Uses Dynamic PORT) Tj ET
+BT /F1 9.6 Tf 58 715.50 Td (Cloud platforms often inject a PORT environment variable. Hardcoding only 8501 can break) Tj ET
+BT /F1 9.6 Tf 58 702.00 Td (deployment.) Tj ET
+BT /F1 9.6 Tf 58 683.50 Td (Fix: the Docker CMD uses ${PORT:-8501}, so local Docker uses 8501 while cloud platforms can) Tj ET
+BT /F1 9.6 Tf 58 670.00 Td (override it.) Tj ET
+BT /F1 8.6 Tf 72 651.50 Td (CMD streamlit run app.py --server.port=${PORT:-8501} --server.address=0.0.0.0) Tj ET
+BT /F2 14 Tf 58 627.00 Td (5. Map Rendering Implementation) Tj ET
+BT /F1 9.6 Tf 58 606.50 Td (build_map\(\) creates a Plotly Figure, draws road edges, overlays routes or maintenance) Tj ET
+BT /F1 9.6 Tf 58 593.00 Td (selections, groups nodes by type, and applies the carto-darkmatter basemap. Reusing this) Tj ET
+BT /F1 9.6 Tf 58 579.50 Td (function keeps all map pages consistent.) Tj ET
+BT /F1 9.4 Tf 58 561.00 Td (- Normal mode: congestion colors, route glow, route waypoints, and chaos overlays.) Tj ET
+BT /F1 9.4 Tf 58 546.50 Td (- Maintenance mode: condition colors, cyan repair overlay, and repair hover details.) Tj ET
+BT /F1 9.4 Tf 58 532.00 Td (- Shared layout: Cairo center, dark basemap, consistent legend, hover labels, and height.) Tj ET
+BT /F1 9.6 Tf 58 517.50 Td (This is better than maintaining separate map functions because future map improvements can be) Tj ET
+BT /F1 9.6 Tf 58 504.00 Td (made once and reused everywhere.) Tj ET
+BT /F2 14 Tf 58 479.50 Td (6. Dockerization Details) Tj ET
+BT /F1 9.6 Tf 58 459.00 Td (The Dockerfile uses python:3.11-slim, installs Linux packages, installs requirements.txt,) Tj ET
+BT /F1 9.6 Tf 58 445.50 Td (copies project files, writes Streamlit configuration, exposes port 8501, and runs app.py.) Tj ET
+BT /F1 8.6 Tf 72 427.00 Td (docker build -t smart-city-transportation .) Tj ET
+BT /F1 8.6 Tf 72 413.50 Td (docker run --rm -p 8501:8501 smart-city-transportation) Tj ET
+BT /F1 9.6 Tf 58 395.00 Td (.dockerignore excludes cache folders, virtual environments, editor settings, logs, zip files,) Tj ET
+BT /F1 9.6 Tf 58 381.50 Td (and local Streamlit settings. The recent map fixes did not add dependencies, so) Tj ET
+BT /F1 9.6 Tf 58 368.00 Td (requirements.txt did not need to change.) Tj ET
+BT /F2 14 Tf 58 343.50 Td (7. Testing And Validation) Tj ET
+BT /F1 9.6 Tf 58 323.00 Td (Testing was done at syntax, algorithm, runtime, and UI levels.) Tj ET
+BT /F1 8.6 Tf 72 304.50 Td (python -m py_compile app.py dp_maintenance.py) Tj ET
+BT /F1 9.4 Tf 58 286.00 Td (- Syntax validation confirmed app.py and dp_maintenance.py compile successfully.) Tj ET
+BT /F1 9.4 Tf 58 271.50 Td (- A runtime smoke test built the maintenance map and confirmed selected road count and score) Tj ET
+BT /F1 9.4 Tf 58 258.00 Td (  values.) Tj ET
+BT /F1 9.4 Tf 58 243.50 Td (- The app was opened locally at localhost:8501.) Tj ET
+BT /F1 9.4 Tf 58 229.00 Td (- The Infrastructure page and Maintenance DP tab were checked in the browser.) Tj ET
+BT /F1 9.4 Tf 58 214.50 Td (- Maintenance displayed a real Cairo basemap with selected roads highlighted.) Tj ET
+BT /F1 9.4 Tf 58 200.00 Td (- Zoom was enabled on all real map views.) Tj ET
+BT /F1 9.6 Tf 58 185.50 Td (A complete Docker validation would build the image, run the container, then repeat the same) Tj ET
+BT /F1 9.6 Tf 58 172.00 Td (browser checks at localhost:8501.) Tj ET
+BT /F1 8 Tf 58 30 Td (Smart City Transportation Network Optimization - Code-Focused Technical Report - Page 4) Tj ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 13 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 9 0 R >>
+endobj
+11 0 obj
+<< /Length 1642 >>
+stream
+BT /F2 14 Tf 58 729.00 Td (8. Complexity Summary) Tj ET
+BT /F1 9.4 Tf 58 708.50 Td (- Dijkstra: O\(\(V + E\) log V\) with a priority queue.) Tj ET
+BT /F1 9.4 Tf 58 694.00 Td (- A*: usually explores fewer nodes when the heuristic is informative.) Tj ET
+BT /F1 9.4 Tf 58 679.50 Td (- Kruskal MST: O\(E log E\), dominated by sorting.) Tj ET
+BT /F1 9.4 Tf 58 665.00 Td (- Maintenance DP: O\(nW\), where n is roads and W is budget.) Tj ET
+BT /F1 9.4 Tf 58 650.50 Td (- Bus allocation DP: depends on route count and fleet size.) Tj ET
+BT /F1 9.4 Tf 58 636.00 Td (- Greedy signal control: fast local choice, approximately O\(k\) for k incoming roads.) Tj ET
+BT /F2 14 Tf 58 615.50 Td (9. Conclusion) Tj ET
+BT /F1 9.6 Tf 58 595.00 Td (The project successfully combines multiple algorithmic techniques into one smart-city) Tj ET
+BT /F1 9.6 Tf 58 581.50 Td (transportation dashboard. The biggest recent improvement was fixing the Maintenance DP) Tj ET
+BT /F1 9.6 Tf 58 568.00 Td (visualization and making map interaction consistent across the application.) Tj ET
+BT /F1 9.6 Tf 58 549.50 Td (The challenges were mostly integration issues: connecting algorithm results to shared) Tj ET
+BT /F1 9.6 Tf 58 536.00 Td (visualization, preserving Streamlit state, separating existing roads from candidate roads,) Tj ET
+BT /F1 9.6 Tf 58 522.50 Td (handling Docker runtime dependencies, and supporting deployment ports. Solving these issues) Tj ET
+BT /F1 9.6 Tf 58 509.00 Td (made the system more professional, reliable, and easier to use.) Tj ET
+BT /F1 8 Tf 58 30 Td (Smart City Transportation Network Optimization - Code-Focused Technical Report - Page 5) Tj ET
+endstream
+endobj
+12 0 obj
+<< /Type /Page /Parent 13 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 1 0 R /F2 2 0 R >> >> /Contents 11 0 R >>
+endobj
+13 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R 8 0 R 10 0 R 12 0 R] /Count 5 >>
+endobj
+14 0 obj
+<< /Type /Catalog /Pages 13 0 R >>
+endobj
+xref
+0 15
+0000000000 65535 f 
+0000000015 00000 n 
+0000000085 00000 n 
+0000000160 00000 n 
+0000003761 00000 n 
+0000003898 00000 n 
+0000007738 00000 n 
+0000007875 00000 n 
+0000011741 00000 n 
+0000011878 00000 n 
+0000015437 00000 n 
+0000015575 00000 n 
+0000017270 00000 n 
+0000017409 00000 n 
+0000017493 00000 n 
+trailer
+<< /Size 15 /Root 14 0 R >>
+startxref
+17544
+%%EOF

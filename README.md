@@ -1,172 +1,332 @@
-# 🚦 Cairo Smart City Transportation Network
-### CSE112 — Design and Analysis of Algorithms | Alamein International University
+# Cairo Smart City Transportation Network Optimization
 
-A complete transportation optimization system for Greater Cairo implementing 7 algorithms across 7 team members, powered by real-time TomTom traffic data and machine learning.
+### CSE112 - Design and Analysis of Algorithms | Alamein International University
+
+A smart transportation optimization system for Greater Cairo that combines graph algorithms, dynamic programming, greedy optimization, machine learning, Docker deployment, and an interactive Streamlit dashboard.
+
+Live app:
+[Smart City Transportation Network Optimization](https://smart-city-transportation-network-optimization.streamlit.app/)
+
+Repository:
+[HanaElanshassy/Smart-City-Transportation-Network-Optimization](https://github.com/HanaElanshassy/Smart-City-Transportation-Network-Optimization)
 
 ---
 
-## 🗺️ What This System Does
+## Overview
 
-| Problem | Algorithm | Member |
+This project models Cairo as a transportation graph where:
+
+- Nodes represent neighborhoods, districts, and important facilities.
+- Edges represent roads between locations.
+- Road attributes include distance, capacity, condition, and construction cost.
+- Traffic data is used to estimate congestion and dynamic travel time.
+
+The system provides an interactive dashboard for:
+
+- route planning,
+- emergency response routing,
+- road expansion planning,
+- public transit allocation,
+- road maintenance optimization,
+- traffic signal simulation,
+- network health monitoring.
+
+---
+
+## Main Features
+
+| Feature | Algorithm / Technique | Module |
 |---|---|---|
-| Which new roads should Cairo build? | Kruskal's MST | 2 |
-| What's the fastest route right now? | Dijkstra's Algorithm | 3 |
-| Fastest ambulance route to hospital? | A* Search | 4 |
-| How to allocate 203 buses across 10 routes? | Dynamic Programming | 5 |
-| Which roads to repair within budget? | DP Knapsack | 6 |
-| How should traffic lights decide? | Greedy Algorithm | 7 |
-| Predict travel times from traffic data? | Random Forest ML | 1 |
+| Fastest route planning | Dijkstra's Algorithm | `dijkstra.py` |
+| Emergency hospital routing | A* Search | `astar.py` |
+| New road expansion | Kruskal's MST | `kruskal_mst.py` |
+| Bus fleet allocation | Dynamic Programming | `public_transit_scheduler.py` |
+| Road maintenance planning | 0/1 Knapsack DP | `dp_maintenance.py` |
+| Traffic signal optimization | Greedy Algorithm | `greedy.py` |
+| Traffic prediction | Random Forest ML | `traffic_ml_model.py` |
+| Interactive dashboard | Streamlit + Plotly Mapbox | `app.py` |
 
 ---
 
-## 📁 Project Structure
+## Streamlit Dashboard
 
-```
-cairo-transport/
-├── data_loader1.py              # Core graph engine (Node, Edge, CairoGraph)
-├── traffic_ml_model.py          # ML traffic predictor (Random Forest)
-├── traffic_api.py               # TomTom live traffic API integration
-├── dijkstra.py                  # Shortest path + memoized route cache
-├── astar.py                     # Emergency routing + Dijkstra vs A* race
-├── kruskal_mst.py               # Infrastructure expansion planner
-├── dp_maintenance.py            # Road maintenance optimizer
-├── public_transit_scheduler.py  # Bus allocation optimizer
-├── greedy.py                    # Traffic signal controller
-├── simulation.py                # Testing framework (7 scenarios)
-├── main.py                      # Integration runner
-├── add_hospital_edges.py        # Utility: add hospital road connections
-├── nodes.csv                    # 25 locations (neighborhoods + facilities)
-├── edges.csv                    # 55 roads (existing + potential new)
-├── Traffic_Flow_Patterns.csv    # Static traffic data (4 time slots)
-├── requirements.txt
-└── Dockerfile
+The app contains four main pages:
+
+### 1. Trip Planner
+
+Finds optimal routes between Cairo locations using Dijkstra or A*.
+
+### 2. Emergency Response
+
+Compares Dijkstra and A* for emergency routing to hospitals and shows node-exploration efficiency.
+
+### 3. Infrastructure
+
+Includes:
+
+- Road Expansion using Kruskal's MST.
+- Bus Allocation using Dynamic Programming.
+- Maintenance DP using 0/1 Knapsack.
+
+### 4. System Dashboard
+
+Shows congestion levels, network metrics, and traffic signal optimization results.
+
+---
+
+## Recent Improvements
+
+The Maintenance DP tab was improved to match the rest of the project maps.
+
+Before the update, the maintenance result was displayed as a separate graph-style heatmap. Now it uses the shared real Cairo map renderer used by the rest of the app.
+
+Implemented improvements:
+
+- Maintenance DP now appears on a real Plotly Mapbox Cairo basemap.
+- Roads are colored by condition:
+  - Poor: red/pink
+  - Fair: yellow
+  - Good: green
+  - Selected for repair: cyan
+- DP-selected repair roads are highlighted with thicker cyan lines and a glow effect.
+- Hover details show condition, distance, repair cost, and score gain.
+- Scroll zoom is enabled consistently across all real maps.
+- Non-map charts were left unchanged.
+
+Shared map config:
+
+```python
+PLOTLY_MAP_CONFIG = {"displayModeBar": False, "scrollZoom": True}
 ```
 
 ---
 
-## ⚙️ Setup & Installation
+## Technical Reports
 
-### Option 1 — Run locally
+Two PDF reports are included in the repository:
+
+| Report | Description |
+|---|---|
+| `Smart_City_Technical_Report.pdf` | General 5-page technical report |
+| `Smart_City_Technical_Report_Code_Focused.pdf` | More code-focused report with implementation issues and fixes |
+
+The code-focused report discusses issues such as:
+
+- inconsistent maintenance map rendering,
+- selected roads not being visually obvious,
+- map zoom behavior,
+- directed vs undirected road traversal,
+- separating existing roads from potential roads,
+- DP integer budget indexing,
+- Streamlit rerun/session-state behavior,
+- Docker runtime library requirements,
+- dynamic cloud deployment ports.
+
+---
+
+## Project Structure
+
+```text
+Smart-City-Transportation-Network-Optimization/
+├── app.py                                  # Streamlit dashboard
+├── data_loader1.py                         # Core graph engine
+├── dijkstra.py                             # Dijkstra shortest path
+├── astar.py                                # A* emergency routing
+├── kruskal_mst.py                          # Road expansion planner
+├── dp_maintenance.py                       # Road maintenance DP knapsack
+├── public_transit_scheduler.py             # Bus allocation DP
+├── greedy.py                               # Traffic signal optimizer
+├── traffic_ml_model.py                     # ML traffic predictor
+├── traffic_api.py                          # TomTom API integration
+├── simulation.py                           # Scenario testing
+├── main.py                                 # Command-line integration runner
+├── nodes.csv                               # Cairo locations
+├── edges.csv                               # Road network
+├── Traffic_Flow_Patterns.csv               # Traffic data
+├── requirements.txt                        # Python dependencies
+├── Dockerfile                              # Docker image definition
+├── .dockerignore                           # Docker ignore rules
+├── Smart_City_Technical_Report.pdf
+└── Smart_City_Technical_Report_Code_Focused.pdf
+```
+
+---
+
+## Run Locally
+
+### 1. Clone The Repository
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/your-team/cairo-transport.git
-cd cairo-transport
+git clone https://github.com/HanaElanshassy/Smart-City-Transportation-Network-Optimization.git
+cd Smart-City-Transportation-Network-Optimization
+```
 
-# 2. Install dependencies
+### 2. Install Dependencies
+
+```bash
 pip install -r requirements.txt
+```
 
-# 3. Run the full demo
+### 3. Run The Streamlit App
+
+```bash
+streamlit run app.py
+```
+
+Open:
+
+```text
+http://localhost:8501
+```
+
+---
+
+## Run With Docker
+
+Make sure Docker Desktop is running.
+
+### Build The Image
+
+```bash
+docker build -t smart-city-transportation .
+```
+
+### Run The Container
+
+```bash
+docker run --rm -p 8501:8501 smart-city-transportation
+```
+
+Open:
+
+```text
+http://localhost:8501
+```
+
+If port `8501` is busy:
+
+```bash
+docker run --rm -p 8502:8501 smart-city-transportation
+```
+
+Then open:
+
+```text
+http://localhost:8502
+```
+
+---
+
+## Run Individual Algorithm Modules
+
+```bash
 python main.py
-
-# 4. Run a specific member's module
-python main.py --module 4   # A* emergency routing
-python main.py --module 7   # Greedy traffic signals
-```
-
-### Option 2 — Run with Docker (recommended)
-
-```bash
-# Build the image
-docker build -t cairo-transport .
-
-# Run the demo
-docker run cairo-transport
-
-# Run interactively
-docker run -it cairo-transport bash
+python main.py --module 3   # Dijkstra
+python main.py --module 4   # A*
+python main.py --module 5   # Transit DP
+python main.py --module 6   # Maintenance DP
 ```
 
 ---
 
-## 🌐 Live Traffic Data (TomTom API)
-
-To use real Cairo traffic data instead of the static CSV:
+## Run Simulations
 
 ```bash
-# 1. Get a free key at developer.tomtom.com
-#    Enable: Routing API + Traffic API (Traffic Flow)
-
-# 2. Set your key as environment variable
-set TOMTOM_API_KEY=your_key_here        # Windows
-export TOMTOM_API_KEY=your_key_here     # Mac/Linux
-
-# 3. Run with live data
-python main.py --live
+python simulation.py
+python simulation.py --scenario 4   # Road closure and rerouting
+python simulation.py --scenario 5   # Dijkstra vs A* comparison
+python simulation.py --scenario 7   # Memoization speedup
 ```
 
-This fetches real travel times for all 43 existing roads × 4 time slots, trains the ML model on real data, and caches results to `live_weights.json`.
+Scenarios include:
 
----
-
-## 🧪 Running Simulations
-
-```bash
-python simulation.py                # all 7 scenarios
-python simulation.py --scenario 4   # road closure test
-python simulation.py --scenario 5   # Dijkstra vs A* race
-python simulation.py --scenario 7   # memoization speedup test
-```
-
-**Scenarios:**
-1. Normal conditions (afternoon)
+1. Normal conditions
 2. Morning rush hour
 3. Evening rush hour
-4. Road closure + rerouting
-5. Emergency response (Dijkstra vs A* comparison)
+4. Road closure and rerouting
+5. Emergency response comparison
 6. Night free flow
 7. Memoization performance test
 
 ---
 
-## 📊 Key Results
+## Live Traffic Data
+
+The project supports optional TomTom traffic integration.
+
+To use live traffic data:
+
+1. Get an API key from [TomTom Developer Portal](https://developer.tomtom.com/).
+2. Set the environment variable:
+
+Windows:
+
+```powershell
+set TOMTOM_API_KEY=your_key_here
+```
+
+macOS/Linux:
+
+```bash
+export TOMTOM_API_KEY=your_key_here
+```
+
+3. Run:
+
+```bash
+python main.py --live
+```
+
+---
+
+## Key Results
 
 | Metric | Value |
 |---|---|
-| Graph nodes | 25 (15 neighborhoods + 10 facilities) |
+| Graph nodes | 25 |
 | Existing roads | 43 |
 | Potential new roads | 12 |
-| ML model R² (congestion) | 0.9962 |
-| A* nodes explored vs Dijkstra | ~3–11 vs 25 (up to 22 fewer) |
-| Memoization speedup | 60–107× on repeated queries |
-| Bus fleet coverage | 3.4% (203 buses / 299K daily demand) |
-| Maintenance budget used | 1,985 / 2,000 cost-units (99.25%) |
+| ML model R2 for congestion | Approximately 0.996 |
+| A* efficiency | Explores fewer nodes than Dijkstra in emergency routing |
+| Maintenance DP example | 12 roads selected, 1,973 / 2,000 cost-units used, +156 score gain |
+| Docker support | Available |
+| Streamlit deployment | Available |
 
 ---
 
-## 🏆 Bonus Features
+## Requirements
 
-- ✅ **ML-based traffic prediction** — Random Forest trained on temporal traffic data
-- ✅ **Live TomTom API integration** — real Cairo congestion data replaces static CSV
-- ✅ **Dijkstra vs A* race animation data** — `compare_algorithms()` exposes step-by-step exploration order for animation
-- ✅ **Docker containerization** — runs identically on any machine
-- ✅ **Memoized route cache** — 60–107× speedup on repeated route queries
-- ✅ **Simulation framework** — 7 scenarios including road closure and emergency testing
+See `requirements.txt` for exact versions.
+
+Main dependencies:
+
+- Python 3.11+
+- Streamlit
+- Plotly
+- pandas
+- numpy
+- scikit-learn
+- joblib
+- matplotlib
+- networkx
+- requests
 
 ---
 
-## 👥 Team Members
+## Team Roles
 
-| Member | Role | Algorithm |
+| Member | Role | Main Contribution |
 |---|---|---|
-| Member 1 | Graph Engine & ML | Data loading, Random Forest, TomTom API |
+| Member 1 | Graph Engine and ML | Data loading, Random Forest, traffic prediction |
 | Member 2 | Infrastructure Designer | Kruskal's MST |
-| Member 3 | Traffic Flow Engineer | Dijkstra's Algorithm |
-| Member 4 | Emergency Response Lead | A* Search |
-| Member 5 | Public Transit Scheduler | Dynamic Programming (bus allocation) |
-| Member 6 | Maintenance Engineer | DP Knapsack (road repair) |
-| Member 7 | Signal Optimizer | Greedy Algorithm |
+| Member 3 | Traffic Flow Engineer | Dijkstra routing |
+| Member 4 | Emergency Response Lead | A* routing |
+| Member 5 | Public Transit Scheduler | Bus allocation DP |
+| Member 6 | Maintenance Engineer | DP Knapsack road repair |
+| Member 7 | Signal Optimizer | Greedy signal control |
 
 ---
 
-## 📋 Requirements
+## License
 
-```
-Python 3.11+
-pandas, numpy, scikit-learn, joblib
-requests (TomTom API)
-streamlit (UI)
-matplotlib, plotly, networkx
-```
-
-See `requirements.txt` for pinned versions.
+This project was developed for educational purposes as part of the CSE112 Design and Analysis of Algorithms course.
